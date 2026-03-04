@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Valkey 8.2 Replication Group on DMZ VPC Private Subnets (AZ-a, AZ-b)
+
+Parameters:
+  DMZVPCStackName:
+    Type: String
+    Default: DMZVPC
+    Description: Name of the DMZVPC CloudFormation stack
+
+  NodeType:
+    Type: String
+    Default: cache.t3.medium
+    Description: ElastiCache node type for Valkey cluster
+    AllowedValues:
+      - cache.t4g.micro
+      - cache.t4g.small
+      - cache.t4g.medium
+      - cache.t3.micro
+      - cache.t3.small
+      - cache.t3.medium
+
+Resources:
+  ValkeySubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for Valkey cluster
+      SubnetIds:
+        - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-A"
+        - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-B"
+
+  ValkeySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Valkey cluster
+      GroupName: !Sub "${AWS::StackName}-ValkeySecurityGroup"
+      VpcId:
+        Fn::ImportValue: !Ref DMZVPCStackName
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp:
+            Fn::ImportValue: !Sub "${DMZVPCStackName}-CIDR"
+          Description: Valkey access from DMZ VPC
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.1.0.0/16
+          Description: Valkey access from VPC01
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.2.0.0/16
+          Description: Valkey access from VPC02
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ValkeySecurityGroup"
+
+  ValkeyReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: Valkey 8.2 Cluster Mode Enabled on DMZ VPC
+      Engine: valkey
+      EngineVersion: '8.2'
+      CacheNodeType: !Ref NodeType
+      NumNodeGroups: 2
+      ReplicasPerNodeGroup: 1
+      AutomaticFailoverEnabled: true
+      MultiAZEnabled: true
+      CacheSubnetGroupName: !Ref ValkeySubnetGroup
+      SecurityGroupIds:
+        - !Ref ValkeySecurityGroup
+      TransitEncryptionEnabled: true
+      AtRestEncryptionEnabled: true
+      Port: 6379
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-valkey-cluster"
+
+Outputs:
+  ValkeyConfigurationEndpoint:
+    Description: Valkey Configuration Endpoint (Cluster Mode)
+    Value: !GetAtt ValkeyReplicationGroup.ConfigurationEndPoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-ValkeyConfigurationEndpoint"
+
+  ValkeyConfigurationPort:
+    Description: Valkey Configuration Port
+    Value: !GetAtt ValkeyReplicationGroup.ConfigurationEndPoint.Port
+    Export:
+      Name: !Sub "${AWS::StackName}-ValkeyConfigurationPort"
+
+  ValkeySecurityGroupId:
+    Description: Valkey Security Group ID
+    Value: !Ref ValkeySecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ValkeySecurityGroupId"
