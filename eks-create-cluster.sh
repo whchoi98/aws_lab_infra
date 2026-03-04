@@ -27,7 +27,7 @@ echo "======================================================"
 echo ""
 echo "🔄 EKS 클러스터 구성 파일 생성 중..."
 
-cat > $HOME/amazonqcli_lab/LabSetup/eksworkshop.yaml << YAML_EOF
+cat > $HOME/aws_lab_infra/eksworkshop.yaml << YAML_EOF
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 

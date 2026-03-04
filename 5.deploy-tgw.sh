@@ -14,7 +14,7 @@ echo "======================================================"
 echo "📋 배포 정보:"
 echo "   - 리전: ${AWS_REGION}"
 echo "   - 스택 이름: TGW"
-echo "   - 템플릿: ~/amazonqcli_lab/LabSetup/4.TGW.yml"
+echo "   - 템플릿: ~/aws_lab_infra/4.TGW.yml"
 echo "======================================================"
 
 # 의존성 스택 확인
@@ -70,7 +70,7 @@ echo "   예상 소요 시간: 5-10분"
 aws cloudformation deploy \
   --region ${AWS_REGION} \
   --stack-name "TGW" \
-  --template-file "$HOME/amazonqcli_lab/LabSetup/4.TGW.yml" \
+  --template-file "$HOME/aws_lab_infra/4.TGW.yml" \
   --capabilities CAPABILITY_NAMED_IAM
 
 echo ""
