@@ -1,6 +1,6 @@
-# LabSetup - Kiro CLI Lab 환경 구축
+# AWS Lab Infrastructure
 
-Kiro CLI와 MCP(Model Context Protocol) 서버를 활용한 AWS 인프라 실습 환경을 자동으로 구축하는 스크립트 모음입니다.
+AWS 인프라 실습 및 테스트 환경을 자동으로 구축하는 스크립트 모음입니다. 네트워킹, 데이터베이스, 컨테이너, AI 개발 도구까지 포괄적인 AWS 플랫폼을 제공합니다.
 
 ## 📋 목차
 
@@ -15,13 +15,14 @@ Kiro CLI와 MCP(Model Context Protocol) 서버를 활용한 AWS 인프라 실습
 
 ## 🚀 개요
 
-이 디렉토리는 AWS 클라우드 환경에서 Kiro CLI를 활용한 실습 환경을 자동으로 구축합니다. 네트워킹 인프라부터 개발 도구, AI 지원 도구까지 포괄적인 환경을 제공합니다.
+AWS 클라우드 환경에서 다양한 서비스를 테스트하고 실습할 수 있는 인프라 플랫폼을 자동으로 구축합니다. 멀티 VPC 네트워킹, 데이터베이스, 컨테이너 오케스트레이션, AI 개발 도구까지 포괄적인 환경을 제공합니다.
 
 ### 주요 특징
 - **자동화된 인프라 배포**: CloudFormation을 통한 일관된 환경 구축
 - **병렬 배포 지원**: 여러 VPC를 동시에 배포하여 시간 단축
 - **개발 도구 통합**: VSCode, AWS CLI, kubectl, helm 등 필수 도구 자동 설치
-- **AI 지원**: Kiro CLI와 MCP 서버 연동으로 향상된 개발 경험
+- **AI 개발 도구**: MCP 서버 연동을 통한 AI 지원 개발 환경 (선택적)
+- **샘플 애플리케이션**: EKS 기반 마이크로서비스 Retail Store 앱 포함
 
 ## 🏗️ 아키텍처
 
@@ -89,13 +90,13 @@ source ~/.bash_profile
 ./5.deploy-tgw.sh
 ```
 
-### 4. Kiro CLI 및 MCP 설정
+### 4. AI 개발 도구 설정 (선택적)
 ```bash
 # Python 3.12, uv, Node.js 설치
 ./6.install-core-mcp.sh
 source ~/.bashrc
 
-# MCP 구성 파일 생성
+# MCP 서버 구성 파일 생성
 ./7.setup-mcp-config.sh
 ```
 
@@ -133,19 +134,17 @@ source ~/.bashrc
 - **기능**: VPC 간 연결 및 라우팅 설정
 - **구성 요소**: Transit Gateway 생성, VPC Attachment, 라우팅 테이블
 
-### Phase 3: Kiro CLI 및 MCP
+### Phase 3: AI 개발 도구 (선택적)
 
 #### 6. 핵심 런타임 설치 (`6.install-core-mcp.sh`)
 **설치 구성요소:**
-- **Python 3.12**: 최신 Python 런타임
+- **Python 3.12**: Python 런타임
 - **uv**: 고성능 Python 패키지 관리자
 - **Node.js**: JavaScript 런타임 (MCP 서버용)
 
-#### 7. MCP 구성 (`7.setup-mcp-config.sh`)
-
-- MCP 서버 구성 파일 생성 (`~/.kiro/settings/mcp.json`)
-- Kiro CLI와 MCP 연동 설정
-- 필요한 의존성 패키지 설치
+#### 7. MCP 서버 구성 (`7.setup-mcp-config.sh`)
+- AWS MCP 서버 16종 구성 (CDK, CloudFormation, EKS, CloudWatch 등)
+- AI CLI 도구와 MCP 연동 설정
 
 ## 🔧 선택적 서비스 배포
 
@@ -182,13 +181,13 @@ source ~/.bashrc
 ./eks-create-cluster.sh
 
 # 클러스터 구성 확인 (dry-run)
-eksctl create cluster --config-file=$HOME/amazonqcli_lab/LabSetup/eksworkshop.yaml --dry-run
+eksctl create cluster --config-file=$HOME/aws_lab_infra/eksworkshop.yaml --dry-run
 
 # 실제 클러스터 생성
-eksctl create cluster --config-file=$HOME/amazonqcli_lab/LabSetup/eksworkshop.yaml
+eksctl create cluster --config-file=$HOME/aws_lab_infra/eksworkshop.yaml
 
 # Sample Application 배포 (Retail Store)
-kubectl apply -k ~/amazonqcli_lab/LabSetup/base-application/
+kubectl apply -k ~/aws_lab_infra/base-application/
 
 # 배포 상태 확인
 kubectl get pods -A | grep -E "carts|catalog|checkout|orders|ui"
@@ -197,7 +196,7 @@ kubectl get pods -A | grep -E "carts|catalog|checkout|orders|ui"
 kubectl port-forward -n ui svc/ui 8080:80
 
 # 정리 (필요시)
-kubectl delete -k ~/amazonqcli_lab/LabSetup/base-application/
+kubectl delete -k ~/aws_lab_infra/base-application/
 ./eks-cleanup.sh
 ```
 
@@ -228,7 +227,7 @@ EKS 클러스터 생성 후 `base-application/` 디렉토리의 Retail Store 샘
 ## 📁 파일 구조
 
 ```
-LabSetup/
+aws_lab_infra/
 ├── Phase 1: 개발 환경
 │   ├── 1.install-dev-tools.sh        # 개발 도구 설치 (AWS CLI, kubectl, helm 등)
 │   ├── 2.set-aws-env.sh              # AWS 환경 설정
@@ -236,9 +235,9 @@ LabSetup/
 ├── Phase 2: 인프라 배포
 │   ├── 4.deploy-all-vpcs.sh          # VPC 일괄 배포 (병렬)
 │   └── 5.deploy-tgw.sh               # Transit Gateway 배포
-├── Phase 3: Kiro CLI 및 MCP
+├── Phase 3: AI 개발 도구 (선택적)
 │   ├── 6.install-core-mcp.sh         # 핵심 런타임 설치 (Python, uv, Node.js)
-│   └── 7.setup-mcp-config.sh         # MCP 구성
+│   └── 7.setup-mcp-config.sh         # MCP 서버 구성
 ├── 선택적 서비스 배포
 │   ├── deploy-valkey.sh              # Valkey 클러스터 배포
 │   ├── deploy-aurora.sh              # Aurora MySQL 배포
@@ -367,11 +366,11 @@ aws cloudformation describe-stacks --stack-name [스택이름] --query 'Stacks[0
    ./5.deploy-tgw.sh         # Transit Gateway
    ```
 
-3. **AI 도구** (Phase 3)
+3. **AI 개발 도구** (Phase 3 - 선택적)
    ```bash
    ./6.install-core-mcp.sh       # 런타임 설치
    source ~/.bashrc
-   ./7.setup-mcp-config.sh       # MCP 구성
+   ./7.setup-mcp-config.sh       # MCP 서버 구성
    ```
 
 4. **선택적 서비스**
@@ -383,8 +382,8 @@ aws cloudformation describe-stacks --stack-name [스택이름] --query 'Stacks[0
    # EKS 클러스터 (선택)
    ./eks-setup-env.sh           # EKS 환경 준비
    ./eks-create-cluster.sh        # eksctl 구성
-   eksctl create cluster --config-file=/home/ec2-user/amazonqcli_lab/LabSetup/eksworkshop.yaml --dry-run
-   eksctl create cluster --config-file=/home/ec2-user/amazonqcli_lab/LabSetup/eksworkshop.yaml
+   eksctl create cluster --config-file=/home/ec2-user/aws_lab_infra/eksworkshop.yaml --dry-run
+   eksctl create cluster --config-file=/home/ec2-user/aws_lab_infra/eksworkshop.yaml
    ```
 
 ## ⚠️ 주의사항
@@ -399,7 +398,7 @@ aws cloudformation describe-stacks --stack-name [스택이름] --query 'Stacks[0
 - 병렬 배포를 통해 전체 구축 시간을 약 50% 단축
 - 각 단계별로 로그를 확인하여 문제 조기 발견
 - AWS 서비스 한도를 미리 확인하여 배포 실패 방지
-- MCP 설정 후 Kiro CLI 로그인하여 /mcp 명령으로 MCP 서버 로딩 확인 가능
+- AI 개발 도구(MCP) 설정은 선택적이며, 인프라만 사용할 경우 Phase 1-2만 실행
 
 ---
 
