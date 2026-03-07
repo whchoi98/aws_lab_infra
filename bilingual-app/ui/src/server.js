@@ -130,7 +130,7 @@ app.get('/catalog', async (req, res) => {
 app.get('/product/:id', async (req, res) => {
   let product = null;
   try {
-    product = await callBackend(`${CATALOG_URL}/catalogue/${req.params.id}`, req.id);
+    product = await callBackend(`${CATALOG_URL}/catalogue/product/${req.params.id}`, req.id);
   } catch (e) { /* null */ }
   if (!product) return res.status(404).render('error', { message: '404' });
   res.render('product', { product });
