@@ -93,8 +93,8 @@ async function callBackend(url, reqId, method = 'get', data = null) {
     const config = {
       method,
       url,
-      headers: { 'X-Request-ID': reqId, 'Content-Type': 'application/json' },
-      timeout: 5000,
+      headers: { 'X-Request-ID': reqId, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      timeout: 10000,
     };
     if (data) config.data = data;
     const res = await axios(config);
@@ -209,8 +209,15 @@ app.post('/checkout/place-order', async (req, res) => {
   const result = await callBackend(`${CHECKOUT_URL}/checkout/1/submit`, req.id, 'post', {});
   logger.info({ action: 'place_order', email, total: checkoutSession?.total, requestId: req.id }, 'order_action');
 
-  // Clear cart after order
-  await callBackend(`${CARTS_URL}/carts/1/items`, req.id, 'delete');
+  // Clear cart after order (delete items one by one since bulk DELETE is not supported)
+  try {
+    const remainingItems = await callBackend(`${CARTS_URL}/carts/1/items`, req.id);
+    if (remainingItems && Array.isArray(remainingItems)) {
+      for (const item of remainingItems) {
+        await callBackend(`${CARTS_URL}/carts/1/items/${item.itemId}`, req.id, 'delete');
+      }
+    }
+  } catch (e) { /* best effort */ }
 
   if (result && !result.statusCode) {
     res.render('order-confirm', { order: result });
