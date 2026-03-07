@@ -18,26 +18,28 @@
         <tbody>
           <% var total = 0; %>
           <% items.forEach(function(item) { %>
-            <% var subtotal = item.quantity * item.price; %>
+            <% var price = Number(item.unitPrice) || 0; %>
+            <% var qty = Number(item.quantity) || 1; %>
+            <% var subtotal = qty * price; %>
             <% total += subtotal; %>
             <tr>
-              <td><%= item.name %></td>
+              <td><%= item.itemId %></td>
               <td>
                 <form action="/cart/update" method="POST" class="qty-form">
-                  <input type="hidden" name="productId" value="<%= item.productId %>">
-                  <input type="number" name="quantity" value="<%= item.quantity %>" min="0" max="99" class="qty-input">
+                  <input type="hidden" name="itemId" value="<%= item.itemId %>">
+                  <input type="number" name="quantity" value="<%= qty %>" min="0" max="99" class="qty-input">
                   <button type="submit" class="btn btn-sm"><%= t.update || 'Update' %></button>
                 </form>
               </td>
               <td>
-                <%= lang === 'ko' ? '₩' + Number(item.price).toLocaleString() : '$' + Number(item.price).toFixed(2) %>
+                <%= lang === 'ko' ? '₩' + price.toLocaleString() : '$' + price.toFixed(2) %>
               </td>
               <td>
                 <%= lang === 'ko' ? '₩' + subtotal.toLocaleString() : '$' + subtotal.toFixed(2) %>
               </td>
               <td>
                 <form action="/cart/remove" method="POST">
-                  <input type="hidden" name="productId" value="<%= item.productId %>">
+                  <input type="hidden" name="itemId" value="<%= item.itemId %>">
                   <button type="submit" class="btn btn-danger btn-sm">&times;</button>
                 </form>
               </td>
