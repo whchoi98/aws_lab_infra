@@ -600,6 +600,187 @@ a:hover { color: var(--color-primary-hover); }
   margin-top: 0.35rem;
 }
 
+/* ===== Hero Extras ===== */
+.hero-badge {
+  display: inline-block;
+  background: rgba(79,70,229,0.1);
+  color: var(--color-primary);
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+  position: relative;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 3rem;
+  justify-content: center;
+  margin-top: 2.5rem;
+  position: relative;
+}
+
+.stat { text-align: center; }
+.stat-num { display: block; font-size: 1.75rem; font-weight: 900; color: var(--color-primary); }
+.stat-label { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ===== Section Header ===== */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.75rem;
+}
+
+.section-link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.page-subtitle {
+  color: var(--color-text-muted);
+  margin-top: -1rem;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+/* ===== Card Badges ===== */
+.card-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--color-primary);
+  color: white;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.card-badge.premium { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.card-badge.urgent { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+/* ===== Product Tags ===== */
+.product-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.4rem 0; }
+
+.tag {
+  display: inline-block;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ===== Product Meta ===== */
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.product-stock {
+  font-size: 0.75rem;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.product-stock.low { color: var(--color-danger); }
+
+.product-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin: 0.3rem 0;
+}
+
+/* ===== Product Detail Features ===== */
+.product-detail-features {
+  display: flex;
+  gap: 1.25rem;
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detail-feature {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.detail-feature-icon { font-size: 1.1rem; }
+
+.stock-info {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-success);
+  margin-bottom: 1rem;
+}
+
+.stock-info.low { color: var(--color-danger); }
+
+/* ===== Features Section ===== */
+.features-section {
+  margin-top: 4rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.feature-card {
+  background: var(--color-white);
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: var(--shadow-xs);
+  text-align: center;
+  transition: all var(--transition);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.feature-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
 /* ===== Placeholder Card ===== */
 .placeholder-card { opacity: 0.5; cursor: default; }
 .placeholder-card:hover { transform: none; box-shadow: var(--shadow-xs); }

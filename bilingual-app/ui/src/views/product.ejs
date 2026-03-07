@@ -1,34 +1,57 @@
 <%- include('partials/header') %>
 
 <section class="product-detail">
-  <a href="/catalog" class="back-link">&larr; <%= t.back %></a>
+  <a href="/catalog" class="back-link">← <%= t.back %></a>
 
   <div class="product-detail-layout">
     <div class="product-detail-image">
-      <div class="image-placeholder large">
-        <span>📦</span>
-      </div>
+      <div class="image-placeholder large"><span>📦</span></div>
     </div>
     <div class="product-detail-info">
       <h1 class="product-detail-name"><%= product.name %></h1>
-      <% if (product.category) { %>
-        <span class="product-detail-category"><%= product.category %></span>
+      <% if (product.tag && product.tag.length > 0) { %>
+        <div class="product-tags" style="margin-bottom: 1rem;">
+          <% product.tag.forEach(function(tag) { %>
+            <span class="tag"><%= tag %></span>
+          <% }); %>
+        </div>
       <% } %>
       <p class="product-detail-price">
         <%= lang === 'ko' ? '₩' + Number(product.price).toLocaleString() : '$' + Number(product.price).toFixed(2) %>
       </p>
+      <% if (product.count) { %>
+        <p class="stock-info <%= product.count < 20 ? 'low' : '' %>">
+          <%= lang === 'ko' ? '재고: ' + product.count + '개' : 'Stock: ' + product.count + ' available' %>
+        </p>
+      <% } %>
       <% if (product.description) { %>
         <p class="product-detail-desc"><%= product.description %></p>
       <% } %>
+
+      <div class="product-detail-features">
+        <div class="detail-feature">
+          <span class="detail-feature-icon">🚚</span>
+          <span><%= lang === 'ko' ? '무료 배송' : 'Free Shipping' %></span>
+        </div>
+        <div class="detail-feature">
+          <span class="detail-feature-icon">🔄</span>
+          <span><%= lang === 'ko' ? '30일 반품' : '30-day Returns' %></span>
+        </div>
+        <div class="detail-feature">
+          <span class="detail-feature-icon">🛡️</span>
+          <span><%= lang === 'ko' ? '정품 보증' : 'Authentic Guarantee' %></span>
+        </div>
+      </div>
+
       <form action="/cart/add" method="POST" class="add-to-cart-form">
         <input type="hidden" name="productId" value="<%= product.id %>">
         <input type="hidden" name="productName" value="<%= product.name %>">
         <input type="hidden" name="price" value="<%= product.price %>">
         <div class="quantity-group">
-          <label for="quantity"><%= t.quantity || 'Qty' %></label>
+          <label for="quantity"><%= t.quantity %></label>
           <input type="number" id="quantity" name="quantity" value="1" min="1" max="99">
         </div>
-        <button type="submit" class="btn btn-primary btn-lg"><%= t.add_to_cart %></button>
+        <button type="submit" class="btn btn-primary btn-lg">🛒 <%= t.add_to_cart %></button>
       </form>
     </div>
   </div>

@@ -1,34 +1,52 @@
 <%- include('partials/header') %>
 
-<section class="catalog">
-  <h1 class="page-title"><%= t.all_products %></h1>
+<section class="catalog-page">
+  <div class="section-header">
+    <h1 class="page-title"><%= t.all_products %></h1>
+    <p class="page-subtitle"><%= lang === 'ko' ? products.length + '개의 상품이 있습니다' : products.length + ' products available' %></p>
+  </div>
 
-  <% if (products && products.length > 0) { %>
-    <div class="product-grid">
-      <% products.forEach(function(product) { %>
+  <div class="product-grid">
+    <% if (products && products.length > 0) { %>
+      <% var emojis = ['⌚','🕰️','⏱️','🪵','📱','💪']; %>
+      <% products.forEach(function(product, i) { %>
         <a href="/product/<%= product.id %>" class="product-card">
+          <% if (product.price > 3000) { %><div class="card-badge premium">👑 <%= lang === 'ko' ? '프리미엄' : 'Premium' %></div><% } %>
+          <% if (product.count && product.count < 20) { %><div class="card-badge urgent">🔥 <%= lang === 'ko' ? '품절임박' : 'Low Stock' %></div><% } %>
           <div class="product-image">
-            <div class="image-placeholder">
-              <span>📦</span>
-            </div>
+            <div class="image-placeholder"><span><%= emojis[i % 6] %></span></div>
           </div>
           <div class="product-info">
             <h3 class="product-name"><%= product.name %></h3>
-            <% if (product.category) { %>
-              <p class="product-category"><%= product.category %></p>
+            <% if (product.description) { %>
+              <p class="product-desc"><%= product.description.substring(0, 60) %></p>
             <% } %>
-            <p class="product-price">
-              <%= lang === 'ko' ? '₩' + Number(product.price).toLocaleString() : '$' + Number(product.price).toFixed(2) %>
-            </p>
+            <% if (product.tag && product.tag.length > 0) { %>
+              <div class="product-tags">
+                <% product.tag.forEach(function(tag) { %>
+                  <span class="tag"><%= tag %></span>
+                <% }); %>
+              </div>
+            <% } %>
+            <div class="product-meta">
+              <p class="product-price">
+                <%= lang === 'ko' ? '₩' + Number(product.price).toLocaleString() : '$' + Number(product.price).toFixed(2) %>
+              </p>
+              <% if (product.count) { %>
+                <span class="product-stock <%= product.count < 20 ? 'low' : '' %>">
+                  <%= lang === 'ko' ? '재고 ' + product.count + '개' : product.count + ' in stock' %>
+                </span>
+              <% } %>
+            </div>
           </div>
         </a>
       <% }); %>
-    </div>
-  <% } else { %>
-    <div class="empty-state">
-      <p><%= t.no_products %></p>
-    </div>
-  <% } %>
+    <% } else { %>
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <p><%= t.no_products %></p>
+      </div>
+    <% } %>
+  </div>
 </section>
 
 <%- include('partials/footer') %>
