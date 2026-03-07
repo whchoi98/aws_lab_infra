@@ -186,6 +186,9 @@ eksctl create cluster --config-file=$HOME/aws_lab_infra/eksworkshop.yaml --dry-r
 # 실제 클러스터 생성
 eksctl create cluster --config-file=$HOME/aws_lab_infra/eksworkshop.yaml
 
+# AWS Load Balancer Controller 배포
+./deploy-lbc.sh
+
 # Sample Application 배포 (Retail Store)
 kubectl apply -k ~/aws_lab_infra/base-application/
 
@@ -198,6 +201,21 @@ kubectl port-forward -n ui svc/ui 8080:80
 # 정리 (필요시)
 kubectl delete -k ~/aws_lab_infra/base-application/
 ./eks-cleanup.sh
+```
+
+### AWS 서비스 리소스 일괄 생성
+
+랩 환경에서 대량의 AWS 리소스를 생성하여 테스트/실습에 활용합니다.
+
+```bash
+# DynamoDB 테이블 일괄 생성 (기본: 20개, lab-table 접두사)
+./create-dynamodb-tables.sh [테이블수] [접두사]
+
+# Lambda 함수 일괄 생성 (기본: 20개, lab-func 접두사, Python/Node.js 런타임 순환)
+./create-lambda-fnctions.sh [함수수] [접두사]
+
+# S3 버킷 일괄 생성 (기본: 20개, lab-bucket 접두사)
+./create-s3-bucket.sh [버킷수] [접두사]
 ```
 
 #### Sample Application 구성
@@ -245,7 +263,14 @@ aws_lab_infra/
 ├── EKS 관리 스크립트
 │   ├── eks-setup-env.sh              # EKS 환경 변수 설정
 │   ├── eks-create-cluster.sh         # eksctl 클러스터 구성 생성
-│   └── eks-cleanup.sh                # EKS 클러스터 정리
+│   ├── eks-cleanup.sh                # EKS 클러스터 정리
+│   └── deploy-lbc.sh                 # AWS Load Balancer Controller 배포
+├── AWS 서비스 리소스 생성
+│   ├── create-dynamodb-tables.sh     # DynamoDB 테이블 일괄 생성
+│   ├── create-lambda-fnctions.sh     # Lambda 함수 일괄 생성
+│   ├── create-s3-bucket.sh           # S3 버킷 일괄 생성
+│   └── setup-cloudwatch.sh           # CloudWatch 설정
+├── deploy-ui-ingress/                # UI Ingress 배포 설정
 ├── Sample Application (kubectl apply -k)
 │   └── base-application/             # Retail Store 마이크로서비스
 │       ├── ui/                       # 프론트엔드
