@@ -1,0 +1,9 @@
+node_modules/
+cdk.out/
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+*.js
+!cdk.json
+*.d.ts
