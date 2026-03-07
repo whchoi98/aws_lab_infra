@@ -76,13 +76,22 @@ for VAR_NAME in VPCID PUBLIC_SUBNET_A PUBLIC_SUBNET_B PRIVATE_SUBNET_A PRIVATE_S
 done
 
 # ─────────────────────────────────────────────
-# 3. EKS 기본 설정값
+# 2.5. 도구 점검
+# ─────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR}/check-prerequisites.sh" ]; then
+  source "${SCRIPT_DIR}/check-prerequisites.sh"
+fi
+
+# ─────────────────────────────────────────────
+# 3. EKS 기본 설정값 (버전 입력 가능)
 # ─────────────────────────────────────────────
 echo ""
 echo "▶ [3/4] EKS 설정값..."
 
 EKSCLUSTER_NAME="eksworkshop"
-EKS_VERSION="1.33"
+read -p "  EKS 버전 [1.33]: " INPUT_EKS_VERSION
+EKS_VERSION=${INPUT_EKS_VERSION:-1.33}
 INSTANCE_TYPE="t4g.2xlarge"
 PRIVATE_MGMD_NODE="managed-backend-workloads"
 
