@@ -61,18 +61,14 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: m7i.2xlarge
-    Description: "EC2 Instance Type for VSCode Server"
+    Default: m7g.2xlarge
+    Description: "EC2 Instance Type for VSCode Server (Graviton)"
     AllowedValues:
       - t4g.xlarge
       - t4g.2xlarge
-      - t3.large
-      - t3.xlarge
-      - t3.2xlarge
       - m7g.xlarge
       - m7g.2xlarge
-      - m7i.xlarge
-      - m7i.2xlarge
+      - m7g.4xlarge
 
   VSCodePassword:
     Type: String
@@ -82,7 +78,7 @@ Parameters:
 
   AmazonLinux2023AmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64
 
 Resources:
   # VPC Configuration
@@ -423,13 +419,13 @@ Resources:
           echo "Node.js version: $(node -v), npm version: $(npm -v)"
           
           # Install AWS CLI v2
-          wget "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -O "awscliv2.zip"
+          wget "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -O "awscliv2.zip"
           unzip awscliv2.zip
           ./aws/install
           rm -rf aws awscliv2.zip
           
           # Install SSM Plugin
-          dnf install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm
+          dnf install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_arm64/session-manager-plugin.rpm
 
           # Install Docker
           dnf install -y docker
@@ -443,11 +439,11 @@ Resources:
           
           # Install code-server v4.106.3
           cd /tmp
-          if wget https://github.com/coder/code-server/releases/download/v4.106.3/code-server-4.106.3-linux-amd64.tar.gz; then
-            tar -xzf code-server-4.106.3-linux-amd64.tar.gz
-            mv code-server-4.106.3-linux-amd64 /usr/local/lib/code-server
+          if wget https://github.com/coder/code-server/releases/download/v4.106.3/code-server-4.106.3-linux-arm64.tar.gz; then
+            tar -xzf code-server-4.106.3-linux-arm64.tar.gz
+            mv code-server-4.106.3-linux-arm64 /usr/local/lib/code-server
             ln -sf /usr/local/lib/code-server/bin/code-server /usr/local/bin/code-server
-            rm code-server-4.106.3-linux-amd64.tar.gz
+            rm code-server-4.106.3-linux-arm64.tar.gz
             echo "code-server installed successfully"
           else
             echo "ERROR: code-server download failed"
@@ -490,7 +486,7 @@ Resources:
           systemctl start code-server
           
           # Install CloudWatch agent
-          wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm || echo "[WARN] CloudWatch agent download failed"
+          wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm || echo "[WARN] CloudWatch agent download failed"
           if [ -f amazon-cloudwatch-agent.rpm ]; then
             rpm -U ./amazon-cloudwatch-agent.rpm || echo "[WARN] CloudWatch agent install failed"
             rm -f amazon-cloudwatch-agent.rpm
@@ -499,7 +495,7 @@ Resources:
           # Install kiro-cli
           cd /home/ec2-user
           if curl --proto '=https' --tlsv1.2 -sSf \
-            'https://desktop-release.q.us-east-1.amazonaws.com/latest/kirocli-x86_64-linux.zip' \
+            'https://desktop-release.q.us-east-1.amazonaws.com/latest/kirocli-aarch64-linux.zip' \
             -o 'kirocli.zip'; then
             unzip -q kirocli.zip
             if [ -d "kirocli/bin" ]; then

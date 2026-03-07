@@ -102,17 +102,17 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: t3.small
+    Default: t4g.small
     AllowedValues:
-      - t3.micro
-      - t3.small
-      - t3.medium
-      - t3.large
-      - m5.large
+      - t4g.micro
+      - t4g.small
+      - t4g.medium
+      - t4g.large
+      - m7g.large
 
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64
 
 Resources:
   #========================================
