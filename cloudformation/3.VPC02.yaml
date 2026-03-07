@@ -1,0 +1,705 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  VPC02 (10.2.0.0/16) - Spoke VPC with Private, Data, and Attach subnets.
+  No IGW, NAT Gateway, or Network Firewall. Internet access via TGW through DMZ VPC.
+  SSM VPC Endpoints for EC2 management. 4 subnet tiers across 2 AZs.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - AvailabilityZoneA
+          - AvailabilityZoneB
+          - VPCCIDRBlock
+      - Label:
+          default: Subnet Configuration
+        Parameters:
+          - PublicSubnetABlock
+          - PublicSubnetBBlock
+          - PrivateSubnetABlock
+          - PrivateSubnetBBlock
+          - DataSubnetABlock
+          - DataSubnetBBlock
+          - AttachSubnetABlock
+          - AttachSubnetBBlock
+      - Label:
+          default: EC2 Configuration
+        Parameters:
+          - InstanceType
+
+Parameters:
+  AvailabilityZoneA:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-2a
+  AvailabilityZoneB:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-2b
+
+  VPCCIDRBlock:
+    Type: String
+    Default: "10.2.0.0/16"
+  PublicSubnetABlock:
+    Type: String
+    Default: "10.2.1.0/24"
+  PublicSubnetBBlock:
+    Type: String
+    Default: "10.2.2.0/24"
+  PrivateSubnetABlock:
+    Type: String
+    Default: "10.2.32.0/19"
+  PrivateSubnetBBlock:
+    Type: String
+    Default: "10.2.64.0/19"
+  DataSubnetABlock:
+    Type: String
+    Default: "10.2.96.0/21"
+  DataSubnetBBlock:
+    Type: String
+    Default: "10.2.104.0/21"
+  AttachSubnetABlock:
+    Type: String
+    Default: "10.2.251.0/24"
+  AttachSubnetBBlock:
+    Type: String
+    Default: "10.2.252.0/24"
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+
+Resources:
+  #========================================
+  # VPC
+  #========================================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDRBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  #========================================
+  # Subnets: Public
+  #========================================
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-Subnet-A"
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+        - Key: Tier
+          Value: public
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-Subnet-B"
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+        - Key: Tier
+          Value: public
+
+  #========================================
+  # Subnets: Private (EKS, EC2)
+  #========================================
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-Subnet-A"
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+        - Key: Tier
+          Value: private
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-Subnet-B"
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+        - Key: Tier
+          Value: private
+
+  #========================================
+  # Subnets: Data (Aurora, Valkey, OpenSearch, MSK)
+  #========================================
+  DataSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DataSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-Subnet-A"
+        - Key: Tier
+          Value: data
+
+  DataSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DataSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-Subnet-B"
+        - Key: Tier
+          Value: data
+
+  #========================================
+  # Subnets: Attach (TGW)
+  #========================================
+  AttachSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref AttachSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-Subnet-A"
+        - Key: Tier
+          Value: attach
+
+  AttachSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref AttachSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-Subnet-B"
+        - Key: Tier
+          Value: attach
+
+  #========================================
+  # Route Tables
+  #========================================
+
+  # Public Subnet Route Tables
+  PublicSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-A-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  PublicSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicSubnetARouteTable
+
+  PublicSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-B-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  PublicSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicSubnetBRouteTable
+
+  # Private Subnet Route Tables
+  PrivateSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-A-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  PrivateSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateSubnetARouteTable
+
+  PrivateSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-B-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  PrivateSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateSubnetBRouteTable
+
+  # Data Subnet Route Tables
+  DataSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-A-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  DataSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DataSubnetA
+      RouteTableId: !Ref DataSubnetARouteTable
+
+  DataSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-B-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  DataSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DataSubnetB
+      RouteTableId: !Ref DataSubnetBRouteTable
+
+  # Attach Subnet Route Tables (for TGW)
+  AttachSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-A-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  AttachSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AttachSubnetA
+      RouteTableId: !Ref AttachSubnetARouteTable
+
+  AttachSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-B-RT"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  AttachSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AttachSubnetB
+      RouteTableId: !Ref AttachSubnetBRouteTable
+
+  #========================================
+  # Security Groups
+  #========================================
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 SG - HTTP and ICMP
+      GroupName: !Sub "${AWS::StackName}-EC2-SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref VPCCIDRBlock
+          Description: HTTP from VPC
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref VPCCIDRBlock
+          Description: ICMP from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-SG"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  SSMEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSM VPC Endpoint SG
+      GroupName: !Sub "${AWS::StackName}-SSM-Endpoint-SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VPCCIDRBlock
+          Description: HTTPS from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-SSM-Endpoint-SG"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  #========================================
+  # VPC Endpoints (SSM)
+  #========================================
+  SSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  SSMMessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  EC2MessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  #========================================
+  # IAM Role for EC2
+  #========================================
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-EC2-Role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-Role"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  #========================================
+  # EC2 Instances (Private Subnets ONLY)
+  #========================================
+  EC2InstanceA1:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - SSMEndpoint
+      - SSMMessagesEndpoint
+      - EC2MessagesEndpoint
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PrivateSubnetA
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
+          AZ=$(ec2-metadata -z | cut -d' ' -f2)
+          cat > /var/www/html/index.html <<EOF
+          <h1>VPC02 - Instance A1</h1>
+          <p>Instance ID: ${!INSTANCE_ID}</p>
+          <p>AZ: ${!AZ}</p>
+          <p>Private IP: $(hostname -I)</p>
+          EOF
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-Private-A1"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  EC2InstanceB1:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - SSMEndpoint
+      - SSMMessagesEndpoint
+      - EC2MessagesEndpoint
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
+          AZ=$(ec2-metadata -z | cut -d' ' -f2)
+          cat > /var/www/html/index.html <<EOF
+          <h1>VPC02 - Instance B1</h1>
+          <p>Instance ID: ${!INSTANCE_ID}</p>
+          <p>AZ: ${!AZ}</p>
+          <p>Private IP: $(hostname -I)</p>
+          EOF
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-Private-B1"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+#========================================
+# Outputs
+#========================================
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  VPCCIDR:
+    Description: VPC CIDR Block
+    Value: !Ref VPCCIDRBlock
+    Export:
+      Name: !Sub "${AWS::StackName}-CIDR"
+
+  PublicSubnetAId:
+    Description: Public Subnet A ID
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet-A"
+
+  PublicSubnetBId:
+    Description: Public Subnet B ID
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet-B"
+
+  PrivateSubnetAId:
+    Description: Private Subnet A ID
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet-A"
+
+  PrivateSubnetBId:
+    Description: Private Subnet B ID
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet-B"
+
+  DataSubnetAId:
+    Description: Data Subnet A ID
+    Value: !Ref DataSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-Subnet-A"
+
+  DataSubnetBId:
+    Description: Data Subnet B ID
+    Value: !Ref DataSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-Subnet-B"
+
+  AttachSubnetAId:
+    Description: Attach Subnet A ID (TGW)
+    Value: !Ref AttachSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Attach-Subnet-A"
+
+  AttachSubnetBId:
+    Description: Attach Subnet B ID (TGW)
+    Value: !Ref AttachSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Attach-Subnet-B"
+
+  PrivateSubnetARouteTableId:
+    Description: Private Subnet A Route Table ID
+    Value: !Ref PrivateSubnetARouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-A-RT"
+
+  PrivateSubnetBRouteTableId:
+    Description: Private Subnet B Route Table ID
+    Value: !Ref PrivateSubnetBRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-B-RT"
+
+  DataSubnetARouteTableId:
+    Description: Data Subnet A Route Table ID
+    Value: !Ref DataSubnetARouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-A-RT"
+
+  DataSubnetBRouteTableId:
+    Description: Data Subnet B Route Table ID
+    Value: !Ref DataSubnetBRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-B-RT"
+
+  EC2SecurityGroupId:
+    Description: EC2 Security Group ID
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-EC2-SG"

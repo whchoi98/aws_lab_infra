@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orders-config
+  namespace: orders
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://orders-postgresql:5432/orders"

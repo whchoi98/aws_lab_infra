@@ -1,0 +1,1275 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  DMZ VPC (10.11.0.0/16) with AWS Network Firewall, NAT Gateway,
+  CloudFront -> ALB -> EC2 pattern. 8 subnet tiers across 2 AZs.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - AvailabilityZoneA
+          - AvailabilityZoneB
+          - VPCCIDRBlock
+      - Label:
+          default: Subnet Configuration
+        Parameters:
+          - PublicSubnetABlock
+          - PublicSubnetBBlock
+          - PrivateSubnetABlock
+          - PrivateSubnetBBlock
+          - DataSubnetABlock
+          - DataSubnetBBlock
+          - AttachSubnetABlock
+          - AttachSubnetBBlock
+          - FWSubnetABlock
+          - FWSubnetBBlock
+          - NATGWSubnetABlock
+          - NATGWSubnetBBlock
+      - Label:
+          default: Routing
+        Parameters:
+          - VPC01CIDRBlock
+          - VPC02CIDRBlock
+      - Label:
+          default: CloudFront + ALB
+        Parameters:
+          - CloudFrontPrefixListId
+      - Label:
+          default: EC2 Configuration
+        Parameters:
+          - InstanceType
+
+Parameters:
+  AvailabilityZoneA:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-2a
+  AvailabilityZoneB:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-2b
+
+  VPCCIDRBlock:
+    Type: String
+    Default: "10.11.0.0/16"
+  PublicSubnetABlock:
+    Type: String
+    Default: "10.11.1.0/24"
+  PublicSubnetBBlock:
+    Type: String
+    Default: "10.11.2.0/24"
+  PrivateSubnetABlock:
+    Type: String
+    Default: "10.11.32.0/19"
+  PrivateSubnetBBlock:
+    Type: String
+    Default: "10.11.64.0/19"
+  DataSubnetABlock:
+    Type: String
+    Default: "10.11.96.0/21"
+  DataSubnetBBlock:
+    Type: String
+    Default: "10.11.104.0/21"
+  AttachSubnetABlock:
+    Type: String
+    Default: "10.11.251.0/24"
+  AttachSubnetBBlock:
+    Type: String
+    Default: "10.11.252.0/24"
+  FWSubnetABlock:
+    Type: String
+    Default: "10.11.241.0/24"
+  FWSubnetBBlock:
+    Type: String
+    Default: "10.11.242.0/24"
+  NATGWSubnetABlock:
+    Type: String
+    Default: "10.11.245.0/24"
+  NATGWSubnetBBlock:
+    Type: String
+    Default: "10.11.246.0/24"
+
+  VPC01CIDRBlock:
+    Type: String
+    Default: "10.1.0.0/16"
+  VPC02CIDRBlock:
+    Type: String
+    Default: "10.2.0.0/16"
+
+  CloudFrontPrefixListId:
+    Type: String
+    Description: CloudFront origin-facing managed prefix list ID
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+
+Resources:
+  #========================================
+  # VPC
+  #========================================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDRBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-IGW"
+        - Key: Environment
+          Value: lab
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  #========================================
+  # NAT Gateways (in NATGW Subnets)
+  #========================================
+  NatGatewayAEIP:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-A-EIP"
+
+  NatGatewayA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayAEIP.AllocationId
+      SubnetId: !Ref NATGWSubnetA
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-A"
+
+  NatGatewayBEIP:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-B-EIP"
+
+  NatGatewayB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayBEIP.AllocationId
+      SubnetId: !Ref NATGWSubnetB
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-B"
+
+  #========================================
+  # Subnets: Public (ALB only, no EC2)
+  #========================================
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-Subnet-A"
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+        - Key: Tier
+          Value: public
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-Subnet-B"
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+        - Key: Tier
+          Value: public
+
+  #========================================
+  # Subnets: Private (EKS, EC2)
+  #========================================
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-Subnet-A"
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+        - Key: Tier
+          Value: private
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-Subnet-B"
+        - Key: kubernetes.io/role/internal-elb
+          Value: "1"
+        - Key: Tier
+          Value: private
+
+  #========================================
+  # Subnets: Data (Aurora, Valkey, OpenSearch, MSK)
+  #========================================
+  DataSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DataSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-Subnet-A"
+        - Key: Tier
+          Value: data
+
+  DataSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref DataSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-Subnet-B"
+        - Key: Tier
+          Value: data
+
+  #========================================
+  # Subnets: Attach (TGW)
+  #========================================
+  AttachSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref AttachSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-Subnet-A"
+        - Key: Tier
+          Value: attach
+
+  AttachSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref AttachSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-Subnet-B"
+        - Key: Tier
+          Value: attach
+
+  #========================================
+  # Subnets: Firewall (Network Firewall endpoints)
+  #========================================
+  FWSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref FWSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-FW-Subnet-A"
+        - Key: Tier
+          Value: firewall
+
+  FWSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref FWSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-FW-Subnet-B"
+        - Key: Tier
+          Value: firewall
+
+  #========================================
+  # Subnets: NAT Gateway
+  #========================================
+  NATGWSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref NATGWSubnetABlock
+      AvailabilityZone: !Ref AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-Subnet-A"
+        - Key: Tier
+          Value: natgw
+
+  NATGWSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref NATGWSubnetBBlock
+      AvailabilityZone: !Ref AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-Subnet-B"
+        - Key: Tier
+          Value: natgw
+
+  #========================================
+  # AWS Network Firewall
+  #========================================
+  NetworkFirewallStatelessRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: !Sub "${AWS::StackName}-stateless-allow-all"
+      Type: STATELESS
+      Capacity: 100
+      RuleGroup:
+        RulesSource:
+          StatelessRulesAndCustomActions:
+            StatelessRules:
+              - RuleDefinition:
+                  MatchAttributes:
+                    Protocols:
+                      - 6
+                    Sources:
+                      - AddressDefinition: "0.0.0.0/0"
+                    Destinations:
+                      - AddressDefinition: "0.0.0.0/0"
+                  Actions:
+                    - "aws:forward_to_sfe"
+                Priority: 1
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-stateless-rg"
+
+  NetworkFirewallStatefulRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: !Sub "${AWS::StackName}-stateful-default"
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RuleVariables:
+          IPSets:
+            HOME_NET:
+              Definition:
+                - !Ref VPCCIDRBlock
+                - !Ref VPC01CIDRBlock
+                - !Ref VPC02CIDRBlock
+        RulesSource:
+          RulesString: |
+            pass tcp $HOME_NET any -> any any (msg:"Allow all TCP outbound"; flow:to_server; sid:1; rev:1;)
+            pass udp $HOME_NET any -> any 53 (msg:"Allow DNS"; sid:2; rev:1;)
+            pass icmp any any -> any any (msg:"Allow ICMP"; sid:3; rev:1;)
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-stateful-rg"
+
+  NetworkFirewallPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    Properties:
+      FirewallPolicyName: !Sub "${AWS::StackName}-fw-policy"
+      FirewallPolicy:
+        StatelessDefaultActions:
+          - "aws:forward_to_sfe"
+        StatelessFragmentDefaultActions:
+          - "aws:forward_to_sfe"
+        StatelessRuleGroupReferences:
+          - ResourceArn: !Ref NetworkFirewallStatelessRuleGroup
+            Priority: 1
+        StatefulRuleGroupReferences:
+          - ResourceArn: !Ref NetworkFirewallStatefulRuleGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-fw-policy"
+
+  NetworkFirewall:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: !Sub "${AWS::StackName}-nfw"
+      FirewallPolicyArn: !Ref NetworkFirewallPolicy
+      VpcId: !Ref VPC
+      SubnetMappings:
+        - SubnetId: !Ref FWSubnetA
+        - SubnetId: !Ref FWSubnetB
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NFW"
+
+  NetworkFirewallLoggingConfiguration:
+    Type: AWS::NetworkFirewall::LoggingConfiguration
+    Properties:
+      FirewallArn: !Ref NetworkFirewall
+      LoggingConfiguration:
+        LogDestinationConfigs:
+          - LogType: ALERT
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: !Ref NFWAlertLogGroup
+          - LogType: FLOW
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: !Ref NFWFlowLogGroup
+
+  NFWAlertLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/network-firewall/${AWS::StackName}/alert"
+      RetentionInDays: 30
+
+  NFWFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/network-firewall/${AWS::StackName}/flow"
+      RetentionInDays: 30
+
+  # Lambda to extract NFW VPC Endpoint IDs
+  FWEndpointLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-fw-endpoint-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DescribeFirewall
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - network-firewall:DescribeFirewall
+                Resource: "*"
+
+  FWEndpointLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-fw-endpoint"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt FWEndpointLambdaRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          def handler(event, context):
+              if event['RequestType'] in ('Create', 'Update'):
+                  try:
+                      nfw = boto3.client('network-firewall')
+                      resp = nfw.describe_firewall(FirewallArn=event['ResourceProperties']['FirewallArn'])
+                      sync_states = resp['FirewallStatus']['SyncStates']
+                      endpoints = {}
+                      for az, state in sync_states.items():
+                          for attach in state.get('Attachment', {}).get('SubnetId', ''):
+                              pass
+                          endpoint_id = state.get('Attachment', {}).get('EndpointId', '')
+                          if endpoint_id:
+                              endpoints[az] = endpoint_id
+                      sorted_azs = sorted(endpoints.keys())
+                      data = {}
+                      if len(sorted_azs) >= 1:
+                          data['EndpointIdA'] = endpoints[sorted_azs[0]]
+                      if len(sorted_azs) >= 2:
+                          data['EndpointIdB'] = endpoints[sorted_azs[1]]
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, data)
+                  except Exception as e:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+              else:
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+  FWEndpoints:
+    Type: Custom::FWEndpoints
+    DependsOn: NetworkFirewall
+    Properties:
+      ServiceToken: !GetAtt FWEndpointLambda.Arn
+      FirewallArn: !Ref NetworkFirewall
+
+  #========================================
+  # Route Tables
+  #========================================
+
+  # IGW Ingress Route Table (routes inbound traffic through NFW)
+  IgwRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-IGW-Ingress-RT"
+
+  IgwRouteTableAssociation:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    Properties:
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref IgwRouteTable
+
+  IgwRouteToPublicA:
+    Type: AWS::EC2::Route
+    DependsOn: FWEndpoints
+    Properties:
+      RouteTableId: !Ref IgwRouteTable
+      DestinationCidrBlock: !Ref PublicSubnetABlock
+      VpcEndpointId: !GetAtt FWEndpoints.EndpointIdA
+
+  IgwRouteToPublicB:
+    Type: AWS::EC2::Route
+    DependsOn: FWEndpoints
+    Properties:
+      RouteTableId: !Ref IgwRouteTable
+      DestinationCidrBlock: !Ref PublicSubnetBBlock
+      VpcEndpointId: !GetAtt FWEndpoints.EndpointIdB
+
+  # FW Subnet Route Tables (default route to IGW)
+  FWSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-FW-A-RT"
+
+  FWSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FWSubnetA
+      RouteTableId: !Ref FWSubnetARouteTable
+
+  FWSubnetADefaultRoute:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref FWSubnetARouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  FWSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-FW-B-RT"
+
+  FWSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FWSubnetB
+      RouteTableId: !Ref FWSubnetBRouteTable
+
+  FWSubnetBDefaultRoute:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref FWSubnetBRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  # NATGW Subnet Route Tables (default to IGW, VPC01/02 traffic to NFW)
+  NATGWSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-A-RT"
+
+  NATGWSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NATGWSubnetA
+      RouteTableId: !Ref NATGWSubnetARouteTable
+
+  NATGWSubnetADefaultRoute:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NATGWSubnetARouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  NATGWSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-NATGW-B-RT"
+
+  NATGWSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NATGWSubnetB
+      RouteTableId: !Ref NATGWSubnetBRouteTable
+
+  NATGWSubnetBDefaultRoute:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NATGWSubnetBRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  # Public Subnet Route Tables (default through NFW for egress)
+  PublicSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-A-RT"
+
+  PublicSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicSubnetARouteTable
+
+  PublicSubnetADefaultRoute:
+    DependsOn: FWEndpoints
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicSubnetARouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      VpcEndpointId: !GetAtt FWEndpoints.EndpointIdA
+
+  PublicSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-B-RT"
+
+  PublicSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicSubnetBRouteTable
+
+  PublicSubnetBDefaultRoute:
+    DependsOn: FWEndpoints
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicSubnetBRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      VpcEndpointId: !GetAtt FWEndpoints.EndpointIdB
+
+  # Private Subnet Route Tables (default to NAT GW)
+  PrivateSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-A-RT"
+
+  PrivateSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateSubnetARouteTable
+
+  PrivateSubnetADefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateSubnetARouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayA
+
+  PrivateSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Private-B-RT"
+
+  PrivateSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateSubnetBRouteTable
+
+  PrivateSubnetBDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateSubnetBRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayB
+
+  # Data Subnet Route Tables (default to NAT GW)
+  DataSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-A-RT"
+
+  DataSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DataSubnetA
+      RouteTableId: !Ref DataSubnetARouteTable
+
+  DataSubnetADefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref DataSubnetARouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayA
+
+  DataSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Data-B-RT"
+
+  DataSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DataSubnetB
+      RouteTableId: !Ref DataSubnetBRouteTable
+
+  DataSubnetBDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref DataSubnetBRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayB
+
+  # Attach Subnet Route Tables (for TGW — no default route until TGW is attached)
+  AttachSubnetARouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-A-RT"
+
+  AttachSubnetARouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AttachSubnetA
+      RouteTableId: !Ref AttachSubnetARouteTable
+
+  AttachSubnetBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Attach-B-RT"
+
+  AttachSubnetBRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AttachSubnetB
+      RouteTableId: !Ref AttachSubnetBRouteTable
+
+  #========================================
+  # Security Groups
+  #========================================
+  PublicALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB SG - HTTP from CloudFront origin-facing only
+      GroupName: !Sub "${AWS::StackName}-Public-ALB-SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !Ref CloudFrontPrefixListId
+          Description: HTTP from CloudFront origin-facing
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-Public-ALB-SG"
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 SG - HTTP from ALB only
+      GroupName: !Sub "${AWS::StackName}-EC2-SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref PublicALBSecurityGroup
+          Description: HTTP from ALB
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref VPCCIDRBlock
+          Description: ICMP from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-SG"
+
+  SSMEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSM VPC Endpoint SG
+      GroupName: !Sub "${AWS::StackName}-SSM-Endpoint-SG"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VPCCIDRBlock
+          Description: HTTPS from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-SSM-Endpoint-SG"
+
+  #========================================
+  # VPC Endpoints (SSM)
+  #========================================
+  SSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  SSMMessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  EC2MessagesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+  #========================================
+  # IAM Role for EC2
+  #========================================
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-EC2-Role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-Role"
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  #========================================
+  # EC2 Instances (Private Subnets ONLY)
+  #========================================
+  EC2InstanceA1:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - SSMEndpoint
+      - SSMMessagesEndpoint
+      - EC2MessagesEndpoint
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PrivateSubnetA
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
+          AZ=$(ec2-metadata -z | cut -d' ' -f2)
+          cat > /var/www/html/index.html <<EOF
+          <h1>DMZ VPC - Instance A1</h1>
+          <p>Instance ID: ${!INSTANCE_ID}</p>
+          <p>AZ: ${!AZ}</p>
+          <p>Private IP: $(hostname -I)</p>
+          EOF
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-Private-A1"
+        - Key: Environment
+          Value: lab
+
+  EC2InstanceB1:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - SSMEndpoint
+      - SSMMessagesEndpoint
+      - EC2MessagesEndpoint
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
+          AZ=$(ec2-metadata -z | cut -d' ' -f2)
+          cat > /var/www/html/index.html <<EOF
+          <h1>DMZ VPC - Instance B1</h1>
+          <p>Instance ID: ${!INSTANCE_ID}</p>
+          <p>AZ: ${!AZ}</p>
+          <p>Private IP: $(hostname -I)</p>
+          EOF
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-EC2-Private-B1"
+        - Key: Environment
+          Value: lab
+
+  #========================================
+  # ALB (Public Subnets) -> EC2 (Private)
+  #========================================
+  PublicALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${AWS::StackName}-ALB"
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      SecurityGroups:
+        - !Ref PublicALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ALB"
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-TG"
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckPath: "/"
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: "200,302"
+      Targets:
+        - Id: !Ref EC2InstanceA1
+          Port: 80
+        - Id: !Ref EC2InstanceB1
+          Port: 80
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-TG"
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref PublicALB
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: "403"
+            ContentType: text/plain
+            MessageBody: Access Denied
+
+  ALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 1
+      Conditions:
+        - Field: http-header
+          HttpHeaderConfig:
+            HttpHeaderName: X-Custom-Secret
+            Values:
+              - !Sub "${AWS::StackName}-secret-${AWS::AccountId}"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+
+  #========================================
+  # CloudFront Distribution
+  #========================================
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "DMZ VPC distribution for ${AWS::StackName}"
+        Origins:
+          - Id: ALBOrigin
+            DomainName: !GetAtt PublicALB.DNSName
+            CustomOriginConfig:
+              HTTPPort: 80
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 60
+            OriginCustomHeaders:
+              - HeaderName: X-Custom-Secret
+                HeaderValue: !Sub "${AWS::StackName}-secret-${AWS::AccountId}"
+        DefaultCacheBehavior:
+          TargetOriginId: ALBOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: all
+            Headers:
+              - "*"
+          MinTTL: 0
+          DefaultTTL: 0
+          MaxTTL: 0
+        PriceClass: PriceClass_200
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-CloudFront"
+
+#========================================
+# Outputs
+#========================================
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  VPCCIDR:
+    Description: VPC CIDR Block
+    Value: !Ref VPCCIDRBlock
+    Export:
+      Name: !Sub "${AWS::StackName}-CIDR"
+
+  PublicSubnetAId:
+    Description: Public Subnet A ID
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet-A"
+
+  PublicSubnetBId:
+    Description: Public Subnet B ID
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet-B"
+
+  PrivateSubnetAId:
+    Description: Private Subnet A ID
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet-A"
+
+  PrivateSubnetBId:
+    Description: Private Subnet B ID
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet-B"
+
+  DataSubnetAId:
+    Description: Data Subnet A ID
+    Value: !Ref DataSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-Subnet-A"
+
+  DataSubnetBId:
+    Description: Data Subnet B ID
+    Value: !Ref DataSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-Subnet-B"
+
+  AttachSubnetAId:
+    Description: Attach Subnet A ID (TGW)
+    Value: !Ref AttachSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-Attach-Subnet-A"
+
+  AttachSubnetBId:
+    Description: Attach Subnet B ID (TGW)
+    Value: !Ref AttachSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-Attach-Subnet-B"
+
+  PrivateSubnetARouteTableId:
+    Description: Private Subnet A Route Table ID
+    Value: !Ref PrivateSubnetARouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-A-RT"
+
+  PrivateSubnetBRouteTableId:
+    Description: Private Subnet B Route Table ID
+    Value: !Ref PrivateSubnetBRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-B-RT"
+
+  DataSubnetARouteTableId:
+    Description: Data Subnet A Route Table ID
+    Value: !Ref DataSubnetARouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-A-RT"
+
+  DataSubnetBRouteTableId:
+    Description: Data Subnet B Route Table ID
+    Value: !Ref DataSubnetBRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-B-RT"
+
+  EC2SecurityGroupId:
+    Description: EC2 Security Group ID
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-EC2-SG"
+
+  ALBSecurityGroupId:
+    Description: ALB Security Group ID
+    Value: !Ref PublicALBSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-SG"
+
+  CloudFrontURL:
+    Description: CloudFront URL
+    Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFront-URL"
+
+  ALBDNSName:
+    Description: ALB DNS Name (direct access blocked)
+    Value: !GetAtt PublicALB.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+
+  NetworkFirewallArn:
+    Description: Network Firewall ARN
+    Value: !Ref NetworkFirewall
+    Export:
+      Name: !Sub "${AWS::StackName}-NFW-ARN"

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  namespace: orders
+  labels:
+    app: orders
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orders
+  template:
+    metadata:
+      labels:
+        app: orders
+    spec:
+      serviceAccountName: orders
+      containers:
+        - name: orders
+          image: public.ecr.aws/aws-containers/retail-store-sample-orders:0.8.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: orders-config
+            - secretRef:
+                name: orders-db-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-config
+  namespace: catalog
+data:
+  DB_ENDPOINT: "REPLACE_WITH_AURORA_WRITER_ENDPOINT"
+  DB_READ_ENDPOINT: "REPLACE_WITH_AURORA_READER_ENDPOINT"
+  DB_PORT: "3306"
+  DB_NAME: "appdb"

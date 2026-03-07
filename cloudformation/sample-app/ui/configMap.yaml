@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ui-config
+  namespace: ui
+data:
+  ENDPOINTS_CATALOG: "http://catalog.catalog:80"
+  ENDPOINTS_CARTS: "http://carts.carts:80"
+  ENDPOINTS_CHECKOUT: "http://checkout.checkout:80"
+  ENDPOINTS_ORDERS: "http://orders.orders:80"

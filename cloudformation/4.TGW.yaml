@@ -1,0 +1,473 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Transit Gateway connecting DMZ VPC, VPC01, and VPC02.
+  Creates TGW, three VPC attachments, and cross-VPC routes.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Stack References
+        Parameters:
+          - DMZVPCStackName
+          - VPC01StackName
+          - VPC02StackName
+
+Parameters:
+  DMZVPCStackName:
+    Type: String
+    Default: DMZVPC
+    Description: Name of the DMZ VPC CloudFormation stack
+
+  VPC01StackName:
+    Type: String
+    Default: VPC01
+    Description: Name of the VPC01 CloudFormation stack
+
+  VPC02StackName:
+    Type: String
+    Default: VPC02
+    Description: Name of the VPC02 CloudFormation stack
+
+Resources:
+  #========================================
+  # Transit Gateway
+  #========================================
+  TransitGateway:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      AmazonSideAsn: 65000
+      AutoAcceptSharedAttachments: enable
+      DefaultRouteTableAssociation: enable
+      DefaultRouteTablePropagation: enable
+      DnsSupport: enable
+      VpnEcmpSupport: enable
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-TGW"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  #========================================
+  # TGW VPC Attachments
+  #========================================
+  DMZVPCAttachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TransitGateway
+      VpcId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+      SubnetIds:
+        - Fn::ImportValue: !Sub "${DMZVPCStackName}-Attach-Subnet-A"
+        - Fn::ImportValue: !Sub "${DMZVPCStackName}-Attach-Subnet-B"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-DMZ-Attachment"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  VPC01Attachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TransitGateway
+      VpcId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-VPC-ID"
+      SubnetIds:
+        - Fn::ImportValue: !Sub "${VPC01StackName}-Attach-Subnet-A"
+        - Fn::ImportValue: !Sub "${VPC01StackName}-Attach-Subnet-B"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-VPC01-Attachment"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  VPC02Attachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TransitGateway
+      VpcId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-VPC-ID"
+      SubnetIds:
+        - Fn::ImportValue: !Sub "${VPC02StackName}-Attach-Subnet-A"
+        - Fn::ImportValue: !Sub "${VPC02StackName}-Attach-Subnet-B"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-VPC02-Attachment"
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  #========================================
+  # DMZ VPC Routes (Private and Data -> TGW)
+  #========================================
+
+  # DMZ Private A -> VPC01 (10.1.0.0/16)
+  DMZPrivateARouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-A-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Private A -> VPC02 (10.2.0.0/16)
+  DMZPrivateARouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-A-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Private B -> VPC01 (10.1.0.0/16)
+  DMZPrivateBRouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-B-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Private B -> VPC02 (10.2.0.0/16)
+  DMZPrivateBRouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-B-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Data A -> VPC01 (10.1.0.0/16)
+  DMZDataARouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-A-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Data A -> VPC02 (10.2.0.0/16)
+  DMZDataARouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-A-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Data B -> VPC01 (10.1.0.0/16)
+  DMZDataBRouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-B-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # DMZ Data B -> VPC02 (10.2.0.0/16)
+  DMZDataBRouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-B-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  #========================================
+  # VPC01 Routes (Private and Data -> TGW)
+  #========================================
+
+  # VPC01 Private A -> 0.0.0.0/0 (internet via DMZ)
+  VPC01PrivateADefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Private-A-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Private A -> DMZ (10.11.0.0/16)
+  VPC01PrivateARouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Private-A-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Private A -> VPC02 (10.2.0.0/16)
+  VPC01PrivateARouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Private-A-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Private B -> 0.0.0.0/0 (internet via DMZ)
+  VPC01PrivateBDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Private-B-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Private B -> DMZ (10.11.0.0/16)
+  VPC01PrivateBRouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Private-B-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Private B -> VPC02 (10.2.0.0/16)
+  VPC01PrivateBRouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Private-B-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Data A -> 0.0.0.0/0 (internet via DMZ)
+  VPC01DataADefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Data-A-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Data A -> DMZ (10.11.0.0/16)
+  VPC01DataARouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Data-A-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Data A -> VPC02 (10.2.0.0/16)
+  VPC01DataARouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Data-A-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Data B -> 0.0.0.0/0 (internet via DMZ)
+  VPC01DataBDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Data-B-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Data B -> DMZ (10.11.0.0/16)
+  VPC01DataBRouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Data-B-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC01 Data B -> VPC02 (10.2.0.0/16)
+  VPC01DataBRouteToVPC02:
+    Type: AWS::EC2::Route
+    DependsOn: VPC01Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC01StackName}-Data-B-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  #========================================
+  # VPC02 Routes (Private and Data -> TGW)
+  #========================================
+
+  # VPC02 Private A -> 0.0.0.0/0 (internet via DMZ)
+  VPC02PrivateADefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Private-A-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Private A -> DMZ (10.11.0.0/16)
+  VPC02PrivateARouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Private-A-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Private A -> VPC01 (10.1.0.0/16)
+  VPC02PrivateARouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Private-A-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Private B -> 0.0.0.0/0 (internet via DMZ)
+  VPC02PrivateBDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Private-B-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Private B -> DMZ (10.11.0.0/16)
+  VPC02PrivateBRouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Private-B-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Private B -> VPC01 (10.1.0.0/16)
+  VPC02PrivateBRouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Private-B-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Data A -> 0.0.0.0/0 (internet via DMZ)
+  VPC02DataADefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Data-A-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Data A -> DMZ (10.11.0.0/16)
+  VPC02DataARouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Data-A-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Data A -> VPC01 (10.1.0.0/16)
+  VPC02DataARouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Data-A-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Data B -> 0.0.0.0/0 (internet via DMZ)
+  VPC02DataBDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Data-B-RT"
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Data B -> DMZ (10.11.0.0/16)
+  VPC02DataBRouteToDMZ:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Data-B-RT"
+      DestinationCidrBlock: "10.11.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  # VPC02 Data B -> VPC01 (10.1.0.0/16)
+  VPC02DataBRouteToVPC01:
+    Type: AWS::EC2::Route
+    DependsOn: VPC02Attachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${VPC02StackName}-Data-B-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+#========================================
+# Outputs
+#========================================
+Outputs:
+  TransitGatewayId:
+    Description: Transit Gateway ID
+    Value: !Ref TransitGateway
+    Export:
+      Name: !Sub "${AWS::StackName}-TGW-ID"
+
+  DMZVPCAttachmentId:
+    Description: DMZ VPC TGW Attachment ID
+    Value: !Ref DMZVPCAttachment
+    Export:
+      Name: !Sub "${AWS::StackName}-DMZ-Attachment-ID"
+
+  VPC01AttachmentId:
+    Description: VPC01 TGW Attachment ID
+    Value: !Ref VPC01Attachment
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC01-Attachment-ID"
+
+  VPC02AttachmentId:
+    Description: VPC02 TGW Attachment ID
+    Value: !Ref VPC02Attachment
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC02-Attachment-ID"

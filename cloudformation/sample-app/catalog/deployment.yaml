@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: catalog
+  labels:
+    app: catalog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      serviceAccountName: catalog
+      containers:
+        - name: catalog
+          image: public.ecr.aws/aws-containers/retail-store-sample-catalog:0.8.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: catalog-config
+            - secretRef:
+                name: catalog-db-secret
+          env:
+            - name: DB_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: catalog-config
+                  key: DB_ENDPOINT
+            - name: DB_READ_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: catalog-config
+                  key: DB_READ_ENDPOINT
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
