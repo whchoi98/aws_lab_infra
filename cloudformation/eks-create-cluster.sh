@@ -1,58 +1,121 @@
 #!/bin/bash
 set -e
 
-# EKS 클러스터 생성 스크립트
-# 사전 요구사항: source eks-setup-env.sh
+# eksctl로 EKS 클러스터를 생성합니다.
+# 사전 요구사항: source eks-setup-env.sh 실행 완료
+#
+# 실행 흐름:
+#   1. eksctl ClusterConfig YAML 생성
+#   2. dry-run으로 검증
+#   3. 사용자 확인 후 실제 클러스터 생성
+#   4. kubeconfig 업데이트
+#   5. 클러스터 상태 확인
 
 source ~/.bash_profile
 
-: "${VPCID:?VPCID 환경변수가 설정되지 않았습니다. source eks-setup-env.sh를 실행하세요.}"
+# ─────────────────────────────────────────────
+# 환경변수 검증
+# ─────────────────────────────────────────────
+: "${VPCID:?VPCID가 설정되지 않았습니다. 먼저 source eks-setup-env.sh를 실행하세요.}"
+: "${PUBLIC_SUBNET_A:?PUBLIC_SUBNET_A가 설정되지 않았습니다.}"
+: "${PUBLIC_SUBNET_B:?PUBLIC_SUBNET_B가 설정되지 않았습니다.}"
 : "${PRIVATE_SUBNET_A:?PRIVATE_SUBNET_A가 설정되지 않았습니다.}"
 : "${PRIVATE_SUBNET_B:?PRIVATE_SUBNET_B가 설정되지 않았습니다.}"
 : "${EKSCLUSTER_NAME:=eksworkshop}"
 : "${EKS_VERSION:=1.33}"
 : "${INSTANCE_TYPE:=t4g.xlarge}"
 : "${PRIVATE_MGMD_NODE:=managed-backend-workloads}"
+: "${AWS_REGION:=ap-northeast-2}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLUSTER_CONFIG="${SCRIPT_DIR}/eksworkshop.yaml"
 
 echo "============================================"
-echo "  EKS 클러스터 생성"
+echo "  EKS 클러스터 생성 (eksctl)"
 echo "============================================"
 echo ""
-echo "  클러스터: ${EKSCLUSTER_NAME}"
-echo "  버전:     ${EKS_VERSION}"
-echo "  VPC:      ${VPCID}"
-echo "  Subnets:  ${PRIVATE_SUBNET_A}, ${PRIVATE_SUBNET_B}"
-echo "  노드:     ${INSTANCE_TYPE} x 4-8"
+echo "  클러스터:      ${EKSCLUSTER_NAME}"
+echo "  EKS 버전:      ${EKS_VERSION}"
+echo "  리전:          ${AWS_REGION}"
+echo "  VPC:           ${VPCID}"
+echo "  Public Subnets:  ${PUBLIC_SUBNET_A}, ${PUBLIC_SUBNET_B}"
+echo "  Private Subnets: ${PRIVATE_SUBNET_A}, ${PRIVATE_SUBNET_B}"
+echo "  노드 타입:     ${INSTANCE_TYPE}"
+echo "  노드 수:       desired=4, min=2, max=8"
 echo ""
 
-# KMS Key ARN
-MASTER_ARN=$(aws kms describe-key --key-id alias/eksworkshop \
-  --query 'KeyMetadata.Arn' --output text 2>/dev/null || echo "")
+# ─────────────────────────────────────────────
+# 1. 기존 클러스터 확인
+# ─────────────────────────────────────────────
+echo "▶ [1/5] 기존 클러스터 확인..."
+EXISTING=$(aws eks describe-cluster --name "${EKSCLUSTER_NAME}" \
+  --query 'cluster.status' --output text \
+  --region "${AWS_REGION}" 2>/dev/null || echo "NOT_FOUND")
 
-# eksctl config 생성
+if [ "$EXISTING" = "ACTIVE" ]; then
+  echo "  ⚠️  클러스터 '${EKSCLUSTER_NAME}'이(가) 이미 존재합니다 (ACTIVE)."
+  echo "  kubeconfig만 업데이트합니다."
+  aws eks update-kubeconfig \
+    --name "${EKSCLUSTER_NAME}" \
+    --region "${AWS_REGION}" \
+    --alias "${EKSCLUSTER_NAME}"
+  echo "  ✅ kubeconfig 업데이트 완료"
+  kubectl get nodes
+  exit 0
+elif [ "$EXISTING" != "NOT_FOUND" ]; then
+  echo "  ❌ 클러스터가 비정상 상태입니다: ${EXISTING}"
+  echo "  수동으로 확인 후 진행하세요."
+  exit 1
+fi
+echo "  ✅ 기존 클러스터 없음 — 새로 생성합니다."
+
+# ─────────────────────────────────────────────
+# 2. eksctl ClusterConfig YAML 생성
+# ─────────────────────────────────────────────
+echo ""
+echo "▶ [2/5] eksctl ClusterConfig 생성..."
+
+# KMS 키 확인
+MASTER_ARN=${MASTER_ARN:-$(aws kms describe-key --key-id alias/eksworkshop \
+  --query 'KeyMetadata.Arn' --output text \
+  --region "${AWS_REGION}" 2>/dev/null || echo "")}
+
+# secretsEncryption 블록 (KMS가 있을 때만)
+SECRETS_BLOCK=""
+if [ -n "$MASTER_ARN" ] && [ "$MASTER_ARN" != "None" ]; then
+  SECRETS_BLOCK="
+secretsEncryption:
+  keyARN: ${MASTER_ARN}"
+fi
+
 cat > "${CLUSTER_CONFIG}" <<YAML_EOF
+---
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
   name: ${EKSCLUSTER_NAME}
-  region: ${AWS_REGION:-ap-northeast-2}
+  region: ${AWS_REGION}
   version: "${EKS_VERSION}"
+  tags:
+    Environment: lab
+    Project: aws-lab-infra
+    ManagedBy: eksctl
 
 vpc:
   id: "${VPCID}"
   subnets:
+    public:
+      ${AWS_REGION}a:
+        id: "${PUBLIC_SUBNET_A}"
+      ${AWS_REGION}b:
+        id: "${PUBLIC_SUBNET_B}"
     private:
-      private-subnet-a:
+      ${AWS_REGION}a:
         id: "${PRIVATE_SUBNET_A}"
-      private-subnet-b:
+      ${AWS_REGION}b:
         id: "${PRIVATE_SUBNET_B}"
-
-$([ -n "$MASTER_ARN" ] && echo "secretsEncryption:
-  keyARN: ${MASTER_ARN}")
+${SECRETS_BLOCK}
 
 managedNodeGroups:
   - name: ${PRIVATE_MGMD_NODE}
@@ -66,6 +129,9 @@ managedNodeGroups:
     amiFamily: AmazonLinux2023
     labels:
       nodegroup-type: "${PRIVATE_MGMD_NODE}"
+    tags:
+      Environment: lab
+      Project: aws-lab-infra
     privateNetworking: true
     subnets:
       - "${PRIVATE_SUBNET_A}"
@@ -85,7 +151,12 @@ managedNodeGroups:
 
 cloudWatch:
   clusterLogging:
-    enableTypes: ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+    enableTypes:
+      - api
+      - audit
+      - authenticator
+      - controllerManager
+      - scheduler
 
 iam:
   withOIDC: true
@@ -103,12 +174,82 @@ addons:
       ebsCSIController: true
 YAML_EOF
 
-echo "  ✅ eksctl 설정 파일 생성: ${CLUSTER_CONFIG}"
+echo "  ✅ 설정 파일 생성: ${CLUSTER_CONFIG}"
+
+# ─────────────────────────────────────────────
+# 3. dry-run 검증
+# ─────────────────────────────────────────────
 echo ""
-echo "  dry-run으로 확인..."
-eksctl create cluster --config-file="${CLUSTER_CONFIG}" --dry-run 2>&1 | head -20
+echo "▶ [3/5] dry-run 검증..."
+if ! eksctl create cluster --config-file="${CLUSTER_CONFIG}" --dry-run > /dev/null 2>&1; then
+  echo "  ❌ dry-run 실패. 설정 파일을 확인하세요:"
+  echo "    ${CLUSTER_CONFIG}"
+  eksctl create cluster --config-file="${CLUSTER_CONFIG}" --dry-run 2>&1 | tail -20
+  exit 1
+fi
+echo "  ✅ dry-run 검증 통과"
+
+# ─────────────────────────────────────────────
+# 4. 사용자 확인 후 클러스터 생성
+# ─────────────────────────────────────────────
 echo ""
-echo "  클러스터를 생성하려면:"
-echo "    eksctl create cluster --config-file=${CLUSTER_CONFIG}"
+echo "============================================"
+echo "  EKS 클러스터를 생성합니다."
+echo "  예상 소요 시간: 15-25분"
+echo "============================================"
 echo ""
+read -p "  계속 진행하시겠습니까? (yes/no): " CONFIRM
+if [ "$CONFIRM" != "yes" ]; then
+  echo ""
+  echo "  취소되었습니다."
+  echo "  수동으로 생성하려면:"
+  echo "    eksctl create cluster --config-file=${CLUSTER_CONFIG}"
+  exit 0
+fi
+
+echo ""
+echo "▶ [4/5] eksctl create cluster 실행..."
+echo "  시작 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+echo ""
+
+eksctl create cluster --config-file="${CLUSTER_CONFIG}"
+
+echo ""
+echo "  ✅ 클러스터 생성 완료!"
+echo "  완료 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+
+# ─────────────────────────────────────────────
+# 5. 클러스터 상태 확인
+# ─────────────────────────────────────────────
+echo ""
+echo "▶ [5/5] 클러스터 상태 확인..."
+
+# kubeconfig 업데이트
+aws eks update-kubeconfig \
+  --name "${EKSCLUSTER_NAME}" \
+  --region "${AWS_REGION}" \
+  --alias "${EKSCLUSTER_NAME}"
+
+echo ""
+echo "  📋 클러스터 정보:"
+kubectl cluster-info
+echo ""
+echo "  📋 노드 목록:"
+kubectl get nodes -o wide
+echo ""
+echo "  📋 시스템 Pod:"
+kubectl get pods -n kube-system
+
+echo ""
+echo "============================================"
+echo "  ✅ EKS 클러스터 생성 및 확인 완료!"
+echo "============================================"
+echo ""
+echo "  클러스터: ${EKSCLUSTER_NAME}"
+echo "  리전:     ${AWS_REGION}"
+echo "  VPC:      ${VPCID}"
+echo ""
+echo "  다음 단계:"
+echo "    1. ./deploy-lbc.sh        # Load Balancer Controller 배포"
+echo "    2. kubectl apply -k sample-app/  # 샘플 애플리케이션 배포"
 echo "============================================"
