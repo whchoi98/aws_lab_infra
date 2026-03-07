@@ -102,6 +102,7 @@ aws cloudformation deploy \
   --parameter-overrides \
     CloudFrontPrefixListId="${CF_PREFIX_LIST_ID}" \
     VSCodePassword="${VSCODE_PASSWORD}" \
+    InstanceType="m7g.xlarge" \
   --region "${AWS_REGION}"
 
 echo ""

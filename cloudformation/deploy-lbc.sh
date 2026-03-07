@@ -87,19 +87,33 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 2. IRSA ServiceAccount 생성
+# 2. Pod Identity 설정 (IRSA 대체)
 # ─────────────────────────────────────────────
 echo ""
-echo "▶ [2/5] IRSA ServiceAccount 생성 (eksctl)"
-eksctl create iamserviceaccount \
-  --cluster="${CLUSTER_NAME}" \
-  --namespace=kube-system \
-  --name=aws-load-balancer-controller \
-  --attach-policy-arn="${POLICY_ARN}" \
-  --override-existing-serviceaccounts \
-  --region="${REGION}" \
-  --approve
-echo "  ✅ ServiceAccount 생성 완료"
+echo "▶ [2/5] Pod Identity IAM Role + Association"
+LBC_ROLE_NAME="AmazonEKSLoadBalancerControllerRole"
+
+# Pod Identity Agent addon
+aws eks create-addon --cluster-name "${CLUSTER_NAME}" --addon-name eks-pod-identity-agent \
+  --region "${REGION}" 2>/dev/null || true
+
+# IAM Role (trust: pods.eks.amazonaws.com)
+if ! aws iam get-role --role-name "${LBC_ROLE_NAME}" &>/dev/null; then
+  aws iam create-role --role-name "${LBC_ROLE_NAME}" \
+    --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"pods.eks.amazonaws.com"},"Action":["sts:AssumeRole","sts:TagSession"]}]}' > /dev/null
+fi
+aws iam attach-role-policy --role-name "${LBC_ROLE_NAME}" --policy-arn "${POLICY_ARN}" 2>/dev/null || true
+
+# Pod Identity Association
+LBC_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${LBC_ROLE_NAME}"
+aws eks create-pod-identity-association \
+  --cluster-name "${CLUSTER_NAME}" \
+  --namespace kube-system \
+  --service-account aws-load-balancer-controller \
+  --role-arn "${LBC_ROLE_ARN}" \
+  --region "${REGION}" 2>/dev/null || echo "  Association 이미 존재"
+
+echo "  ✅ Pod Identity 설정 완료"
 
 # ─────────────────────────────────────────────
 # 3. Helm 리포지토리 설정
@@ -129,7 +143,7 @@ fi
 helm ${HELM_CMD} aws-load-balancer-controller eks/aws-load-balancer-controller \
   -n kube-system \
   --set clusterName="${CLUSTER_NAME}" \
-  --set serviceAccount.create=false \
+  --set serviceAccount.create=true \
   --set serviceAccount.name=aws-load-balancer-controller \
   --set region="${REGION}" \
   --set vpcId="${VPC_ID}" \

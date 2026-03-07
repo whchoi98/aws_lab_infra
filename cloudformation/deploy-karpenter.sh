@@ -17,7 +17,7 @@ source ~/.bash_profile 2>/dev/null || true
 CLUSTER_NAME="${EKSCLUSTER_NAME:-eksworkshop}"
 REGION="${AWS_REGION:-ap-northeast-2}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-KARPENTER_VERSION="1.1.1"
+KARPENTER_VERSION="1.9.0"
 KARPENTER_NAMESPACE="kube-system"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
