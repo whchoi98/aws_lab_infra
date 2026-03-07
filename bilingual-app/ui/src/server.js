@@ -216,9 +216,11 @@ app.post('/checkout/place-order', async (req, res) => {
     lastName: lastName || 'User',
     email: email || 'guest@lab.shop',
     items: cartItems.map(item => ({
-      itemId: item.itemId,
+      productId: item.itemId,
+      name: item.itemId,
       quantity: item.quantity || 1,
-      unitPrice: item.unitPrice || 0,
+      unitCost: item.unitPrice || 0,
+      totalCost: (item.unitPrice || 0) * (item.quantity || 1),
     })),
   };
   const result = await callBackend(`${ORDERS_URL}/orders`, req.id, 'post', orderPayload);
