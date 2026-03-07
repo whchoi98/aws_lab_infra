@@ -120,9 +120,9 @@ ${SECRETS_BLOCK}
 managedNodeGroups:
   - name: ${PRIVATE_MGMD_NODE}
     instanceType: ${INSTANCE_TYPE}
-    desiredCapacity: 4
+    desiredCapacity: 2
     minSize: 2
-    maxSize: 8
+    maxSize: 4
     volumeSize: 50
     volumeType: gp3
     volumeEncrypted: true
@@ -250,6 +250,7 @@ echo "  리전:     ${AWS_REGION}"
 echo "  VPC:      ${VPCID}"
 echo ""
 echo "  다음 단계:"
-echo "    1. ./deploy-lbc.sh        # Load Balancer Controller 배포"
-echo "    2. kubectl apply -k sample-app/  # 샘플 애플리케이션 배포"
+echo "    1. ./deploy-lbc.sh            # Load Balancer Controller 배포"
+echo "    2. ./deploy-karpenter.sh      # Karpenter 노드 오토스케일러 배포"
+echo "    3. kubectl apply -k sample-app/  # 샘플 애플리케이션 배포"
 echo "============================================"
