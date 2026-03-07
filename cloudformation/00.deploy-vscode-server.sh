@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_NAME="mgmt-vpc"
-TEMPLATE_FILE="${SCRIPT_DIR}/vscode_server_secure.yaml"
+TEMPLATE_FILE="${SCRIPT_DIR}/templates/vscode_server_secure.yaml"
 
 echo "============================================"
 echo "  VSCode Server 배포"

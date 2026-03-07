@@ -10,7 +10,7 @@ echo "============================================"
 
 aws cloudformation deploy \
   --stack-name Valkey \
-  --template-file "${SCRIPT_DIR}/valkey-cluster-stack.yaml" \
+  --template-file "${SCRIPT_DIR}/templates/valkey-cluster-stack.yaml" \
   --region "${AWS_REGION}"
 
 echo ""

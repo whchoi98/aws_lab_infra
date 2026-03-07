@@ -41,7 +41,7 @@ echo "▶ [1/3] DMZVPC 배포 시작..."
 {
   aws cloudformation deploy \
     --stack-name DMZVPC \
-    --template-file "${SCRIPT_DIR}/1.DMZVPC.yaml" \
+    --template-file "${SCRIPT_DIR}/templates/1.DMZVPC.yaml" \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides \
       CloudFrontPrefixListId="${CF_PREFIX_LIST_ID}" \
@@ -55,7 +55,7 @@ echo "▶ [2/3] VPC01 배포 시작..."
 {
   aws cloudformation deploy \
     --stack-name VPC01 \
-    --template-file "${SCRIPT_DIR}/2.VPC01.yaml" \
+    --template-file "${SCRIPT_DIR}/templates/2.VPC01.yaml" \
     --capabilities CAPABILITY_NAMED_IAM \
     --region "${AWS_REGION}" 2>&1
   echo "  ✅ VPC01 배포 완료"
@@ -67,7 +67,7 @@ echo "▶ [3/3] VPC02 배포 시작..."
 {
   aws cloudformation deploy \
     --stack-name VPC02 \
-    --template-file "${SCRIPT_DIR}/3.VPC02.yaml" \
+    --template-file "${SCRIPT_DIR}/templates/3.VPC02.yaml" \
     --capabilities CAPABILITY_NAMED_IAM \
     --region "${AWS_REGION}" 2>&1
   echo "  ✅ VPC02 배포 완료"

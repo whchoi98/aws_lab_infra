@@ -36,7 +36,7 @@ echo ""
 
 aws cloudformation deploy \
   --stack-name TGW \
-  --template-file "${SCRIPT_DIR}/4.TGW.yaml" \
+  --template-file "${SCRIPT_DIR}/templates/4.TGW.yaml" \
   --capabilities CAPABILITY_IAM \
   --region "${AWS_REGION}"
 

@@ -26,7 +26,7 @@ fi
 echo ""
 aws cloudformation deploy \
   --stack-name Aurora \
-  --template-file "${SCRIPT_DIR}/aurora-mysql-stack.yaml" \
+  --template-file "${SCRIPT_DIR}/templates/aurora-mysql-stack.yaml" \
   --parameter-overrides \
     DBName="${DB_NAME}" \
     DBMasterUsername="${DB_USER}" \
