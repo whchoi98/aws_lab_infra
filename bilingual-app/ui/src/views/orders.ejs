@@ -16,16 +16,24 @@
         </thead>
         <tbody>
           <% orders.forEach(function(order) { %>
+            <%
+              var orderTotal = 0;
+              if (order.items && Array.isArray(order.items)) {
+                order.items.forEach(function(item) { orderTotal += (item.totalCost || item.unitCost || 0); });
+              }
+              var orderDate = order.date || order.createdAt || new Date().toISOString();
+              var orderStatus = order.status || 'completed';
+            %>
             <tr>
-              <td class="order-id"><%= order.id %></td>
-              <td><%= new Date(order.date).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US') %></td>
+              <td class="order-id"><%= order.id ? order.id.substring(0, 8) + '...' : 'N/A' %></td>
+              <td><%= new Date(orderDate).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></td>
               <td>
-                <span class="status-badge status-<%= (order.status || 'pending').toLowerCase() %>">
-                  <%= order.status %>
+                <span class="status-badge status-<%= orderStatus.toLowerCase() %>">
+                  <%= lang === 'ko' ? (orderStatus === 'completed' ? '완료' : orderStatus === 'pending' ? '처리중' : orderStatus) : orderStatus %>
                 </span>
               </td>
               <td>
-                <%= lang === 'ko' ? '₩' + Number(order.total).toLocaleString() : '$' + Number(order.total).toFixed(2) %>
+                <%= lang === 'ko' ? '₩' + orderTotal.toLocaleString() : '$' + orderTotal.toFixed(2) %>
               </td>
             </tr>
           <% }); %>
