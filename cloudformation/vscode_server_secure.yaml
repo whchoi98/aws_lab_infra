@@ -61,13 +61,18 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: t4g.xlarge
+    Default: m7g.xlarge
     Description: "EC2 Instance Type for VSCode Server (Graviton)"
     AllowedValues:
+      - t4g.small
+      - t4g.medium
+      - t4g.large
       - t4g.xlarge
       - t4g.2xlarge
+      - m7g.large
       - m7g.xlarge
-      - m7g.2xlarge
+      - m7i.large
+      - m7i.xlarge
 
   VSCodePassword:
     Type: String

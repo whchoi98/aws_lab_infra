@@ -684,7 +684,7 @@ data "aws_ami" "amazon_linux_2023" {
 resource "aws_instance" "private" {
   count                  = length(var.private_subnets)
   ami                    = data.aws_ami.amazon_linux_2023.id
-  instance_type          = "t4g.medium"
+  instance_type          = "t4g.large"
   subnet_id              = aws_subnet.private[count.index].id
   iam_instance_profile   = aws_iam_instance_profile.ec2_ssm.name
   vpc_security_group_ids = [aws_security_group.ec2.id]

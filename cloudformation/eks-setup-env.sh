@@ -83,7 +83,7 @@ echo "▶ [3/4] EKS 설정값..."
 
 EKSCLUSTER_NAME="eksworkshop"
 EKS_VERSION="1.33"
-INSTANCE_TYPE="t4g.xlarge"
+INSTANCE_TYPE="t4g.2xlarge"
 PRIVATE_MGMD_NODE="managed-backend-workloads"
 
 echo "  클러스터 이름:  ${EKSCLUSTER_NAME}"

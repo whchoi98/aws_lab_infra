@@ -67,13 +67,17 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: t4g.medium
+    Default: t4g.large
     AllowedValues:
       - t4g.small
       - t4g.medium
-      - t4g.medium
       - t4g.large
+      - t4g.xlarge
+      - t4g.2xlarge
       - m7g.large
+      - m7g.xlarge
+      - m7i.large
+      - m7i.xlarge
 
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>

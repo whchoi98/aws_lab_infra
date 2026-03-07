@@ -210,7 +210,7 @@ export class Vpc01Stack extends cdk.Stack {
     );
 
     new ec2.CfnInstance(this, 'Vpc01InstanceA', {
-      instanceType: 't4g.medium',
+      instanceType: 't4g.large',
       imageId: amznLinux2023.getImage(this).imageId,
       subnetId: this.privateSubnetA.ref,
       securityGroupIds: [ec2Sg.ref],
@@ -220,7 +220,7 @@ export class Vpc01Stack extends cdk.Stack {
     });
 
     new ec2.CfnInstance(this, 'Vpc01InstanceB', {
-      instanceType: 't4g.medium',
+      instanceType: 't4g.large',
       imageId: amznLinux2023.getImage(this).imageId,
       subnetId: this.privateSubnetB.ref,
       securityGroupIds: [ec2Sg.ref],

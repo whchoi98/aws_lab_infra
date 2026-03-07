@@ -627,7 +627,7 @@ def handler(event, context):
     );
 
     const instanceA = new ec2.CfnInstance(this, 'DmzInstanceA', {
-      instanceType: 't4g.medium',
+      instanceType: 't4g.large',
       imageId: amznLinux2023.getImage(this).imageId,
       subnetId: this.privateSubnetA.ref,
       securityGroupIds: [ec2Sg.ref],
@@ -637,7 +637,7 @@ def handler(event, context):
     });
 
     const instanceB = new ec2.CfnInstance(this, 'DmzInstanceB', {
-      instanceType: 't4g.medium',
+      instanceType: 't4g.large',
       imageId: amznLinux2023.getImage(this).imageId,
       subnetId: this.privateSubnetB.ref,
       securityGroupIds: [ec2Sg.ref],
