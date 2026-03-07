@@ -178,7 +178,7 @@ app.get('/cart', async (req, res) => {
 
 // Checkout: place order (2-step: update → submit)
 app.post('/checkout/place-order', async (req, res) => {
-  const { firstName, lastName, email, address, city, zip } = req.body;
+  const { first_name: firstName, last_name: lastName, email, address, city, zip } = req.body;
 
   // Calculate subtotal from cart
   let subtotal = 0;
