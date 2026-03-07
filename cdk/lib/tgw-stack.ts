@@ -42,7 +42,7 @@ export class TgwStack extends cdk.Stack {
         props.dmzVpcStack.attachSubnetA.ref,
         props.dmzVpcStack.attachSubnetB.ref,
       ],
-      tags: [{ key: 'Name', value: 'tgw-dmz-attachment' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-tgw-dmzvpc-attach' }, ...this.toTags(tags)],
     });
 
     const vpc01Attachment = new ec2.CfnTransitGatewayAttachment(this, 'TgwVpc01Attachment', {
@@ -52,7 +52,7 @@ export class TgwStack extends cdk.Stack {
         props.vpc01Stack.attachSubnetA.ref,
         props.vpc01Stack.attachSubnetB.ref,
       ],
-      tags: [{ key: 'Name', value: 'tgw-vpc01-attachment' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-tgw-vpc01-attach' }, ...this.toTags(tags)],
     });
 
     const vpc02Attachment = new ec2.CfnTransitGatewayAttachment(this, 'TgwVpc02Attachment', {
@@ -62,7 +62,7 @@ export class TgwStack extends cdk.Stack {
         props.vpc02Stack.attachSubnetA.ref,
         props.vpc02Stack.attachSubnetB.ref,
       ],
-      tags: [{ key: 'Name', value: 'tgw-vpc02-attachment' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-tgw-vpc02-attach' }, ...this.toTags(tags)],
     });
 
     // ========================================================================

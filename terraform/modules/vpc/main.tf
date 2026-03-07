@@ -9,7 +9,7 @@ resource "aws_vpc" "this" {
   enable_dns_hostnames = true
 
   tags = merge(var.common_tags, {
-    Name = var.vpc_name
+    Name = "lab-${lower(var.vpc_name)}"
   })
 }
 
@@ -23,7 +23,7 @@ resource "aws_subnet" "public" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Public-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${lower(var.vpc_name)}-public-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Public"
   })
 }
@@ -38,7 +38,7 @@ resource "aws_subnet" "private" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Private-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${lower(var.vpc_name)}-private-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Private"
   })
 }
@@ -53,7 +53,7 @@ resource "aws_subnet" "data" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Data-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${lower(var.vpc_name)}-data-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Data"
   })
 }
@@ -68,7 +68,7 @@ resource "aws_subnet" "attach" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Attach-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${lower(var.vpc_name)}-attach-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Attach"
   })
 }
@@ -80,7 +80,7 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Public-RT"
+    Name = "lab-${lower(var.vpc_name)}-public-rt"
   })
 }
 
@@ -88,7 +88,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Private-RT"
+    Name = "lab-${lower(var.vpc_name)}-private-rt"
   })
 }
 
@@ -96,7 +96,7 @@ resource "aws_route_table" "data" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Data-RT"
+    Name = "lab-${lower(var.vpc_name)}-data-rt"
   })
 }
 
@@ -104,7 +104,7 @@ resource "aws_route_table" "attach" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Attach-RT"
+    Name = "lab-${lower(var.vpc_name)}-attach-rt"
   })
 }
 
@@ -159,7 +159,7 @@ resource "aws_security_group" "vpce" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-VPCE-SG"
+    Name = "lab-${lower(var.vpc_name)}-vpce-sg"
   })
 }
 
@@ -172,7 +172,7 @@ resource "aws_vpc_endpoint" "ssm" {
   security_group_ids  = [aws_security_group.vpce.id]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-SSM-Endpoint"
+    Name = "lab-${lower(var.vpc_name)}-ssm-endpoint"
   })
 }
 
@@ -185,7 +185,7 @@ resource "aws_vpc_endpoint" "ssmmessages" {
   security_group_ids  = [aws_security_group.vpce.id]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-SSMMessages-Endpoint"
+    Name = "lab-${lower(var.vpc_name)}-ssmmessages-endpoint"
   })
 }
 
@@ -198,7 +198,7 @@ resource "aws_vpc_endpoint" "ec2messages" {
   security_group_ids  = [aws_security_group.vpce.id]
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-EC2Messages-Endpoint"
+    Name = "lab-${lower(var.vpc_name)}-ec2messages-endpoint"
   })
 }
 
@@ -222,7 +222,7 @@ resource "aws_iam_role" "ec2_ssm" {
   })
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-EC2-SSM-Role"
+    Name = "lab-${lower(var.vpc_name)}-ec2-ssm-role"
   })
 }
 
@@ -236,7 +236,7 @@ resource "aws_iam_instance_profile" "ec2_ssm" {
   role        = aws_iam_role.ec2_ssm.name
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-EC2-SSM-Profile"
+    Name = "lab-${lower(var.vpc_name)}-ec2-ssm-profile"
   })
 }
 
@@ -280,7 +280,7 @@ resource "aws_security_group" "ec2" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-EC2-SG"
+    Name = "lab-${lower(var.vpc_name)}-ec2-sg"
   })
 }
 
@@ -321,6 +321,6 @@ resource "aws_instance" "private" {
   )
 
   tags = merge(var.common_tags, {
-    Name = "${var.vpc_name}-Private-Instance-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${lower(var.vpc_name)}-private-ec2-${count.index == 0 ? "a1" : "b1"}"
   })
 }

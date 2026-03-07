@@ -51,7 +51,7 @@ export class DataServicesStack extends cdk.Stack {
           cidrIp: LAB_CONFIG.vpc02.cidr,
         },
       ],
-      tags: [{ key: 'Name', value: 'aurora-mysql-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-aurora-sg' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -72,7 +72,7 @@ export class DataServicesStack extends cdk.Stack {
     // ========================================================================
     const auroraCluster = new rds.CfnDBCluster(this, 'AuroraCluster', {
       engine: 'aurora-mysql',
-      engineVersion: '8.0.mysql_aurora.3.07.1',
+      engineVersion: '8.0.mysql_aurora.3.08.0',
       dbClusterIdentifier: 'lab-aurora-cluster',
       masterUsername: 'admin',
       manageMasterUserPassword: true,
@@ -87,23 +87,23 @@ export class DataServicesStack extends cdk.Stack {
 
     // Aurora MySQL Instances
     const auroraInstanceA = new rds.CfnDBInstance(this, 'AuroraInstanceA', {
-      dbInstanceClass: 'db.r6g.large',
+      dbInstanceClass: 'db.r7g.large',
       engine: 'aurora-mysql',
       dbClusterIdentifier: auroraCluster.ref,
-      dbInstanceIdentifier: 'lab-aurora-instance-a',
+      dbInstanceIdentifier: 'lab-aurora-primary',
       availabilityZone: `${this.region}a`,
       publiclyAccessible: false,
-      tags: [{ key: 'Name', value: 'lab-aurora-instance-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-aurora-primary' }, ...this.toTags(tags)],
     });
 
     const auroraInstanceB = new rds.CfnDBInstance(this, 'AuroraInstanceB', {
-      dbInstanceClass: 'db.r6g.large',
+      dbInstanceClass: 'db.r7g.large',
       engine: 'aurora-mysql',
       dbClusterIdentifier: auroraCluster.ref,
-      dbInstanceIdentifier: 'lab-aurora-instance-b',
+      dbInstanceIdentifier: 'lab-aurora-replica',
       availabilityZone: `${this.region}b`,
       publiclyAccessible: false,
-      tags: [{ key: 'Name', value: 'lab-aurora-instance-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-aurora-replica' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -135,7 +135,7 @@ export class DataServicesStack extends cdk.Stack {
           cidrIp: LAB_CONFIG.vpc02.cidr,
         },
       ],
-      tags: [{ key: 'Name', value: 'valkey-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-valkey-sg' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -158,7 +158,7 @@ export class DataServicesStack extends cdk.Stack {
       replicationGroupDescription: 'Valkey replication group for lab infrastructure',
       replicationGroupId: 'lab-valkey-rg',
       engine: 'valkey',
-      cacheNodeType: 'cache.r6g.large',
+      cacheNodeType: 'cache.r7g.large',
       numCacheClusters: 2,
       automaticFailoverEnabled: true,
       multiAzEnabled: true,
@@ -167,7 +167,7 @@ export class DataServicesStack extends cdk.Stack {
       atRestEncryptionEnabled: true,
       transitEncryptionEnabled: true,
       port: 6379,
-      tags: [{ key: 'Name', value: 'lab-valkey-rg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-valkey-cluster' }, ...this.toTags(tags)],
     });
 
     // ========================================================================

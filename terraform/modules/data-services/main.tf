@@ -6,7 +6,7 @@ resource "aws_db_subnet_group" "aurora" {
   subnet_ids = var.data_subnet_ids
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Aurora-SubnetGroup"
+    Name = "lab-aurora-subnet-group"
   })
 }
 
@@ -31,7 +31,7 @@ resource "aws_security_group" "aurora" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Aurora-SG"
+    Name = "lab-aurora-sg"
   })
 }
 
@@ -48,21 +48,21 @@ resource "aws_rds_cluster" "aurora" {
   storage_encrypted      = true
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Aurora-Cluster"
+    Name = "lab-aurora-cluster"
   })
 }
 
 resource "aws_rds_cluster_instance" "aurora" {
   count               = 2
-  identifier          = "lab-aurora-instance-${count.index + 1}"
+  identifier          = count.index == 0 ? "lab-aurora-primary" : "lab-aurora-replica"
   cluster_identifier  = aws_rds_cluster.aurora.id
-  instance_class      = "db.r6g.large"
+  instance_class      = "db.r7g.large"
   engine              = aws_rds_cluster.aurora.engine
   engine_version      = aws_rds_cluster.aurora.engine_version
   db_subnet_group_name = aws_db_subnet_group.aurora.name
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Aurora-Instance-${count.index + 1}"
+    Name = count.index == 0 ? "lab-aurora-primary" : "lab-aurora-replica"
   })
 }
 
@@ -74,7 +74,7 @@ resource "aws_elasticache_subnet_group" "valkey" {
   subnet_ids = var.data_subnet_ids
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Valkey-SubnetGroup"
+    Name = "lab-valkey-subnet-group"
   })
 }
 
@@ -99,7 +99,7 @@ resource "aws_security_group" "valkey" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Valkey-SG"
+    Name = "lab-valkey-sg"
   })
 }
 
@@ -108,7 +108,7 @@ resource "aws_elasticache_replication_group" "valkey" {
   description          = "Lab Valkey replication group"
   engine               = "valkey"
   engine_version       = "8.0"
-  node_type            = "cache.r6g.large"
+  node_type            = "cache.r7g.large"
   num_cache_clusters   = 2
   port                 = 6379
   subnet_group_name    = aws_elasticache_subnet_group.valkey.name
@@ -119,6 +119,6 @@ resource "aws_elasticache_replication_group" "valkey" {
   automatic_failover_enabled = true
 
   tags = merge(var.common_tags, {
-    Name = "Lab-Valkey"
+    Name = "lab-valkey-cluster"
   })
 }

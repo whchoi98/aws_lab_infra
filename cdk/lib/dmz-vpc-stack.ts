@@ -45,7 +45,7 @@ export class DmzVpcStack extends cdk.Stack {
       cidrBlock: config.cidr,
       enableDnsHostnames: true,
       enableDnsSupport: true,
-      tags: [{ key: 'Name', value: 'dmz-vpc' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc' }, ...this.toTags(tags)],
     });
     this.vpcId = this.vpc.ref;
 
@@ -53,7 +53,7 @@ export class DmzVpcStack extends cdk.Stack {
     // Internet Gateway
     // ========================================================================
     const igw = new ec2.CfnInternetGateway(this, 'DmzIgw', {
-      tags: [{ key: 'Name', value: 'dmz-igw' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-igw' }, ...this.toTags(tags)],
     });
     new ec2.CfnVPCGatewayAttachment(this, 'DmzIgwAttach', {
       vpcId: this.vpcId,
@@ -64,50 +64,50 @@ export class DmzVpcStack extends cdk.Stack {
     // Subnets
     // ========================================================================
     // Public Subnets
-    this.publicSubnetA = this.createSubnet('DmzPublicSubnetA', config.subnets.public.cidrA, azA, 'dmz-public-a');
-    this.publicSubnetB = this.createSubnet('DmzPublicSubnetB', config.subnets.public.cidrB, azB, 'dmz-public-b');
+    this.publicSubnetA = this.createSubnet('DmzPublicSubnetA', config.subnets.public.cidrA, azA, 'lab-dmzvpc-public-subnet-a');
+    this.publicSubnetB = this.createSubnet('DmzPublicSubnetB', config.subnets.public.cidrB, azB, 'lab-dmzvpc-public-subnet-b');
 
     // Private Subnets
-    this.privateSubnetA = this.createSubnet('DmzPrivateSubnetA', config.subnets.private.cidrA, azA, 'dmz-private-a');
-    this.privateSubnetB = this.createSubnet('DmzPrivateSubnetB', config.subnets.private.cidrB, azB, 'dmz-private-b');
+    this.privateSubnetA = this.createSubnet('DmzPrivateSubnetA', config.subnets.private.cidrA, azA, 'lab-dmzvpc-private-subnet-a');
+    this.privateSubnetB = this.createSubnet('DmzPrivateSubnetB', config.subnets.private.cidrB, azB, 'lab-dmzvpc-private-subnet-b');
 
     // Data Subnets
-    this.dataSubnetA = this.createSubnet('DmzDataSubnetA', config.subnets.data.cidrA, azA, 'dmz-data-a');
-    this.dataSubnetB = this.createSubnet('DmzDataSubnetB', config.subnets.data.cidrB, azB, 'dmz-data-b');
+    this.dataSubnetA = this.createSubnet('DmzDataSubnetA', config.subnets.data.cidrA, azA, 'lab-dmzvpc-data-subnet-a');
+    this.dataSubnetB = this.createSubnet('DmzDataSubnetB', config.subnets.data.cidrB, azB, 'lab-dmzvpc-data-subnet-b');
 
     // Attach Subnets (for TGW)
-    this.attachSubnetA = this.createSubnet('DmzAttachSubnetA', config.subnets.attach.cidrA, azA, 'dmz-attach-a');
-    this.attachSubnetB = this.createSubnet('DmzAttachSubnetB', config.subnets.attach.cidrB, azB, 'dmz-attach-b');
+    this.attachSubnetA = this.createSubnet('DmzAttachSubnetA', config.subnets.attach.cidrA, azA, 'lab-dmzvpc-attach-subnet-a');
+    this.attachSubnetB = this.createSubnet('DmzAttachSubnetB', config.subnets.attach.cidrB, azB, 'lab-dmzvpc-attach-subnet-b');
 
     // Firewall Subnets
-    const fwSubnetA = this.createSubnet('DmzFwSubnetA', config.subnets.fw.cidrA, azA, 'dmz-fw-a');
-    const fwSubnetB = this.createSubnet('DmzFwSubnetB', config.subnets.fw.cidrB, azB, 'dmz-fw-b');
+    const fwSubnetA = this.createSubnet('DmzFwSubnetA', config.subnets.fw.cidrA, azA, 'lab-dmzvpc-fw-subnet-a');
+    const fwSubnetB = this.createSubnet('DmzFwSubnetB', config.subnets.fw.cidrB, azB, 'lab-dmzvpc-fw-subnet-b');
 
     // NAT Gateway Subnets
-    const natgwSubnetA = this.createSubnet('DmzNatgwSubnetA', config.subnets.natgw.cidrA, azA, 'dmz-natgw-a');
-    const natgwSubnetB = this.createSubnet('DmzNatgwSubnetB', config.subnets.natgw.cidrB, azB, 'dmz-natgw-b');
+    const natgwSubnetA = this.createSubnet('DmzNatgwSubnetA', config.subnets.natgw.cidrA, azA, 'lab-dmzvpc-natgw-subnet-a');
+    const natgwSubnetB = this.createSubnet('DmzNatgwSubnetB', config.subnets.natgw.cidrB, azB, 'lab-dmzvpc-natgw-subnet-b');
 
     // ========================================================================
     // Elastic IPs and NAT Gateways
     // ========================================================================
     const eipA = new ec2.CfnEIP(this, 'DmzEipA', {
       domain: 'vpc',
-      tags: [{ key: 'Name', value: 'dmz-natgw-eip-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-eip-a' }, ...this.toTags(tags)],
     });
     const eipB = new ec2.CfnEIP(this, 'DmzEipB', {
       domain: 'vpc',
-      tags: [{ key: 'Name', value: 'dmz-natgw-eip-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-eip-b' }, ...this.toTags(tags)],
     });
 
     const natGwA = new ec2.CfnNatGateway(this, 'DmzNatGwA', {
       subnetId: natgwSubnetA.ref,
       allocationId: eipA.attrAllocationId,
-      tags: [{ key: 'Name', value: 'dmz-natgw-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-a' }, ...this.toTags(tags)],
     });
     const natGwB = new ec2.CfnNatGateway(this, 'DmzNatGwB', {
       subnetId: natgwSubnetB.ref,
       allocationId: eipB.attrAllocationId,
-      tags: [{ key: 'Name', value: 'dmz-natgw-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-b' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -159,7 +159,7 @@ export class DmzVpcStack extends cdk.Stack {
           },
         },
       },
-      tags: [{ key: 'Name', value: 'dmz-nfw-stateless-rg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-nfw-stateless-rg' }, ...this.toTags(tags)],
     });
 
     // Stateful rule group - pass TCP/UDP/ICMP for HOME_NET
@@ -252,7 +252,7 @@ export class DmzVpcStack extends cdk.Stack {
           ],
         },
       },
-      tags: [{ key: 'Name', value: 'dmz-nfw-stateful-rg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-nfw-stateful-rg' }, ...this.toTags(tags)],
     });
 
     // Firewall Policy
@@ -273,7 +273,7 @@ export class DmzVpcStack extends cdk.Stack {
           },
         ],
       },
-      tags: [{ key: 'Name', value: 'dmz-nfw-policy' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-nfw-policy' }, ...this.toTags(tags)],
     });
 
     // Network Firewall
@@ -285,7 +285,7 @@ export class DmzVpcStack extends cdk.Stack {
         { subnetId: fwSubnetA.ref },
         { subnetId: fwSubnetB.ref },
       ],
-      tags: [{ key: 'Name', value: 'dmz-nfw' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-nfw' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -365,7 +365,7 @@ def handler(event, context):
     // --- IGW Ingress Route Table (Edge Association) ---
     const igwRouteTable = new ec2.CfnRouteTable(this, 'DmzIgwRt', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-igw-rt' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-igw-rt' }, ...this.toTags(tags)],
     });
     new ec2.CfnGatewayRouteTableAssociation(this, 'DmzIgwRtAssoc', {
       gatewayId: igw.ref,
@@ -386,11 +386,11 @@ def handler(event, context):
     // --- Public Route Tables ---
     const publicRtA = new ec2.CfnRouteTable(this, 'DmzPublicRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-public-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-public-rt-a' }, ...this.toTags(tags)],
     });
     const publicRtB = new ec2.CfnRouteTable(this, 'DmzPublicRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-public-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-public-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzPublicRtAssocA', {
       subnetId: this.publicSubnetA.ref,
@@ -415,11 +415,11 @@ def handler(event, context):
     // --- Firewall Route Tables ---
     const fwRtA = new ec2.CfnRouteTable(this, 'DmzFwRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-fw-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-fw-rt-a' }, ...this.toTags(tags)],
     });
     const fwRtB = new ec2.CfnRouteTable(this, 'DmzFwRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-fw-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-fw-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzFwRtAssocA', {
       subnetId: fwSubnetA.ref,
@@ -444,11 +444,11 @@ def handler(event, context):
     // --- NATGW Route Tables ---
     const natgwRtA = new ec2.CfnRouteTable(this, 'DmzNatgwRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-natgw-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-rt-a' }, ...this.toTags(tags)],
     });
     const natgwRtB = new ec2.CfnRouteTable(this, 'DmzNatgwRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-natgw-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzNatgwRtAssocA', {
       subnetId: natgwSubnetA.ref,
@@ -473,11 +473,11 @@ def handler(event, context):
     // --- Private Route Tables ---
     this.privateRouteTableA = new ec2.CfnRouteTable(this, 'DmzPrivateRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-private-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-private-rt-a' }, ...this.toTags(tags)],
     });
     this.privateRouteTableB = new ec2.CfnRouteTable(this, 'DmzPrivateRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-private-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-private-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzPrivateRtAssocA', {
       subnetId: this.privateSubnetA.ref,
@@ -502,11 +502,11 @@ def handler(event, context):
     // --- Data Route Tables ---
     this.dataRouteTableA = new ec2.CfnRouteTable(this, 'DmzDataRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-data-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-data-rt-a' }, ...this.toTags(tags)],
     });
     this.dataRouteTableB = new ec2.CfnRouteTable(this, 'DmzDataRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-data-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-data-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzDataRtAssocA', {
       subnetId: this.dataSubnetA.ref,
@@ -531,11 +531,11 @@ def handler(event, context):
     // --- Attach Route Tables ---
     this.attachRouteTableA = new ec2.CfnRouteTable(this, 'DmzAttachRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-attach-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-attach-rt-a' }, ...this.toTags(tags)],
     });
     this.attachRouteTableB = new ec2.CfnRouteTable(this, 'DmzAttachRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'dmz-attach-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-attach-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzAttachRtAssocA', {
       subnetId: this.attachSubnetA.ref,
@@ -555,7 +555,7 @@ def handler(event, context):
       securityGroupIngress: [
         { ipProtocol: 'tcp', fromPort: 443, toPort: 443, cidrIp: config.cidr },
       ],
-      tags: [{ key: 'Name', value: 'dmz-ssm-endpoint-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-ssm-endpoint-sg' }, ...this.toTags(tags)],
     });
 
     const endpointSubnets = [this.privateSubnetA.ref, this.privateSubnetB.ref];
@@ -607,7 +607,7 @@ def handler(event, context):
         { ipProtocol: 'tcp', fromPort: 443, toPort: 443, cidrIp: config.cidr },
         { ipProtocol: 'icmp', fromPort: -1, toPort: -1, cidrIp: '10.0.0.0/8' },
       ],
-      tags: [{ key: 'Name', value: 'dmz-ec2-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-ec2-sg' }, ...this.toTags(tags)],
     });
 
     const amznLinux2023 = ec2.MachineImage.latestAmazonLinux2023({
@@ -633,7 +633,7 @@ def handler(event, context):
       securityGroupIds: [ec2Sg.ref],
       iamInstanceProfile: instanceProfile.ref,
       userData: cdk.Fn.base64(userData.render()),
-      tags: [{ key: 'Name', value: 'dmz-instance-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-private-ec2-a01' }, ...this.toTags(tags)],
     });
 
     const instanceB = new ec2.CfnInstance(this, 'DmzInstanceB', {
@@ -643,7 +643,7 @@ def handler(event, context):
       securityGroupIds: [ec2Sg.ref],
       iamInstanceProfile: instanceProfile.ref,
       userData: cdk.Fn.base64(userData.render()),
-      tags: [{ key: 'Name', value: 'dmz-instance-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-private-ec2-b01' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -656,7 +656,7 @@ def handler(event, context):
         { ipProtocol: 'tcp', fromPort: 80, toPort: 80, cidrIp: '0.0.0.0/0' },
         { ipProtocol: 'tcp', fromPort: 443, toPort: 443, cidrIp: '0.0.0.0/0' },
       ],
-      tags: [{ key: 'Name', value: 'dmz-alb-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-alb-sg' }, ...this.toTags(tags)],
     });
 
     const alb = new elbv2.CfnLoadBalancer(this, 'DmzAlb', {
@@ -665,7 +665,7 @@ def handler(event, context):
       type: 'application',
       subnets: [this.publicSubnetA.ref, this.publicSubnetB.ref],
       securityGroups: [albSg.ref],
-      tags: [{ key: 'Name', value: 'dmz-alb' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-alb' }, ...this.toTags(tags)],
     });
 
     const targetGroup = new elbv2.CfnTargetGroup(this, 'DmzAlbTg', {
@@ -680,7 +680,7 @@ def handler(event, context):
         { id: instanceA.ref, port: 80 },
         { id: instanceB.ref, port: 80 },
       ],
-      tags: [{ key: 'Name', value: 'dmz-alb-tg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-alb-tg' }, ...this.toTags(tags)],
     });
 
     const customSecretValue = 'LabSecretHeader2024';

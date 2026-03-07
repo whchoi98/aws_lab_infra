@@ -131,7 +131,7 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}"
+          Value: lab-dmzvpc
         - Key: Environment
           Value: lab
         - Key: Project
@@ -144,7 +144,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-IGW"
+          Value: lab-dmzvpc-igw
         - Key: Environment
           Value: lab
 
@@ -164,7 +164,7 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-A-EIP"
+          Value: lab-dmzvpc-natgw-eip-a
 
   NatGatewayA:
     Type: AWS::EC2::NatGateway
@@ -173,7 +173,7 @@ Resources:
       SubnetId: !Ref NATGWSubnetA
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-A"
+          Value: lab-dmzvpc-natgw-a
 
   NatGatewayBEIP:
     DependsOn: VPCGatewayAttachment
@@ -182,7 +182,7 @@ Resources:
       Domain: vpc
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-B-EIP"
+          Value: lab-dmzvpc-natgw-eip-b
 
   NatGatewayB:
     Type: AWS::EC2::NatGateway
@@ -191,7 +191,7 @@ Resources:
       SubnetId: !Ref NATGWSubnetB
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-B"
+          Value: lab-dmzvpc-natgw-b
 
   #========================================
   # Subnets: Public (ALB only, no EC2)
@@ -205,7 +205,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-Subnet-A"
+          Value: lab-dmzvpc-public-subnet-a
         - Key: kubernetes.io/role/elb
           Value: "1"
         - Key: Tier
@@ -220,7 +220,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-Subnet-B"
+          Value: lab-dmzvpc-public-subnet-b
         - Key: kubernetes.io/role/elb
           Value: "1"
         - Key: Tier
@@ -238,7 +238,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-Subnet-A"
+          Value: lab-dmzvpc-private-subnet-a
         - Key: kubernetes.io/role/internal-elb
           Value: "1"
         - Key: Tier
@@ -253,7 +253,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-Subnet-B"
+          Value: lab-dmzvpc-private-subnet-b
         - Key: kubernetes.io/role/internal-elb
           Value: "1"
         - Key: Tier
@@ -271,7 +271,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-Subnet-A"
+          Value: lab-dmzvpc-data-subnet-a
         - Key: Tier
           Value: data
 
@@ -284,7 +284,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-Subnet-B"
+          Value: lab-dmzvpc-data-subnet-b
         - Key: Tier
           Value: data
 
@@ -300,7 +300,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-Subnet-A"
+          Value: lab-dmzvpc-attach-subnet-a
         - Key: Tier
           Value: attach
 
@@ -313,7 +313,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-Subnet-B"
+          Value: lab-dmzvpc-attach-subnet-b
         - Key: Tier
           Value: attach
 
@@ -329,7 +329,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-FW-Subnet-A"
+          Value: lab-dmzvpc-fw-subnet-a
         - Key: Tier
           Value: firewall
 
@@ -342,7 +342,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-FW-Subnet-B"
+          Value: lab-dmzvpc-fw-subnet-b
         - Key: Tier
           Value: firewall
 
@@ -358,7 +358,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-Subnet-A"
+          Value: lab-dmzvpc-natgw-subnet-a
         - Key: Tier
           Value: natgw
 
@@ -371,7 +371,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-Subnet-B"
+          Value: lab-dmzvpc-natgw-subnet-b
         - Key: Tier
           Value: natgw
 
@@ -401,7 +401,7 @@ Resources:
                 Priority: 1
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-stateless-rg"
+          Value: lab-dmzvpc-nfw-stateless-rg
 
   NetworkFirewallStatefulRuleGroup:
     Type: AWS::NetworkFirewall::RuleGroup
@@ -424,7 +424,7 @@ Resources:
             pass icmp any any -> any any (msg:"Allow ICMP"; sid:3; rev:1;)
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-stateful-rg"
+          Value: lab-dmzvpc-nfw-stateful-rg
 
   NetworkFirewallPolicy:
     Type: AWS::NetworkFirewall::FirewallPolicy
@@ -442,7 +442,7 @@ Resources:
           - ResourceArn: !Ref NetworkFirewallStatefulRuleGroup
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-fw-policy"
+          Value: lab-dmzvpc-nfw-policy
 
   NetworkFirewall:
     Type: AWS::NetworkFirewall::Firewall
@@ -455,7 +455,7 @@ Resources:
         - SubnetId: !Ref FWSubnetB
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NFW"
+          Value: lab-dmzvpc-nfw
 
   NetworkFirewallLoggingConfiguration:
     Type: AWS::NetworkFirewall::LoggingConfiguration
@@ -563,7 +563,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-IGW-Ingress-RT"
+          Value: lab-dmzvpc-igw-ingress-rt
 
   IgwRouteTableAssociation:
     Type: AWS::EC2::GatewayRouteTableAssociation
@@ -594,7 +594,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-FW-A-RT"
+          Value: lab-dmzvpc-fw-rt-a
 
   FWSubnetARouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -616,7 +616,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-FW-B-RT"
+          Value: lab-dmzvpc-fw-rt-b
 
   FWSubnetBRouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -639,7 +639,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-A-RT"
+          Value: lab-dmzvpc-natgw-rt-a
 
   NATGWSubnetARouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -661,7 +661,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-NATGW-B-RT"
+          Value: lab-dmzvpc-natgw-rt-b
 
   NATGWSubnetBRouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -684,7 +684,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-A-RT"
+          Value: lab-dmzvpc-public-rt-a
 
   PublicSubnetARouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -706,7 +706,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-B-RT"
+          Value: lab-dmzvpc-public-rt-b
 
   PublicSubnetBRouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -729,7 +729,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-A-RT"
+          Value: lab-dmzvpc-private-rt-a
 
   PrivateSubnetARouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -750,7 +750,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-B-RT"
+          Value: lab-dmzvpc-private-rt-b
 
   PrivateSubnetBRouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -772,7 +772,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-A-RT"
+          Value: lab-dmzvpc-data-rt-a
 
   DataSubnetARouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -793,7 +793,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-B-RT"
+          Value: lab-dmzvpc-data-rt-b
 
   DataSubnetBRouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -815,7 +815,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-A-RT"
+          Value: lab-dmzvpc-attach-rt-a
 
   AttachSubnetARouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -829,7 +829,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-B-RT"
+          Value: lab-dmzvpc-attach-rt-b
 
   AttachSubnetBRouteTableAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -854,7 +854,7 @@ Resources:
           Description: HTTP from CloudFront origin-facing
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-ALB-SG"
+          Value: lab-dmzvpc-alb-sg
 
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -875,7 +875,7 @@ Resources:
           Description: ICMP from VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-SG"
+          Value: lab-dmzvpc-ec2-sg
 
   SSMEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -891,7 +891,7 @@ Resources:
           Description: HTTPS from VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-SSM-Endpoint-SG"
+          Value: lab-dmzvpc-ssm-endpoint-sg
 
   #========================================
   # VPC Endpoints (SSM)
@@ -954,7 +954,7 @@ Resources:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-Role"
+          Value: lab-dmzvpc-ec2-role
 
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -1001,7 +1001,7 @@ Resources:
           EOF
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-Private-A1"
+          Value: lab-dmzvpc-private-ec2-a01
         - Key: Environment
           Value: lab
 
@@ -1041,7 +1041,7 @@ Resources:
           EOF
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-Private-B1"
+          Value: lab-dmzvpc-private-ec2-b01
         - Key: Environment
           Value: lab
 
@@ -1065,7 +1065,7 @@ Resources:
         - !Ref PublicALBSecurityGroup
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-ALB"
+          Value: lab-dmzvpc-alb
 
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -1089,7 +1089,7 @@ Resources:
           Port: 80
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-TG"
+          Value: lab-dmzvpc-alb-tg
 
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -1158,7 +1158,7 @@ Resources:
           CloudFrontDefaultCertificate: true
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-CloudFront"
+          Value: lab-dmzvpc-cloudfront
 
 #========================================
 # Outputs

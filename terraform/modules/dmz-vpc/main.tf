@@ -1,7 +1,7 @@
 data "aws_region" "current" {}
 
 locals {
-  vpc_name = "DMZ-VPC"
+  vpc_name = "dmzvpc"
 }
 
 # -------------------------------------------------------
@@ -13,7 +13,7 @@ resource "aws_vpc" "this" {
   enable_dns_hostnames = true
 
   tags = merge(var.common_tags, {
-    Name = local.vpc_name
+    Name = "lab-${local.vpc_name}"
   })
 }
 
@@ -24,7 +24,7 @@ resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-IGW"
+    Name = "lab-${local.vpc_name}-igw"
   })
 }
 
@@ -39,7 +39,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Public-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-public-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Public"
   })
 }
@@ -54,7 +54,7 @@ resource "aws_subnet" "private" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Private-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-private-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Private"
   })
 }
@@ -69,7 +69,7 @@ resource "aws_subnet" "data" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Data-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-data-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Data"
   })
 }
@@ -84,7 +84,7 @@ resource "aws_subnet" "attach" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Attach-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-attach-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Attach"
   })
 }
@@ -99,7 +99,7 @@ resource "aws_subnet" "fw" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-FW-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-fw-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "Firewall"
   })
 }
@@ -114,7 +114,7 @@ resource "aws_subnet" "natgw" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-NATGW-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-natgw-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "NATGW"
   })
 }
@@ -130,7 +130,7 @@ resource "aws_subnet" "alb" {
   map_public_ip_on_launch = true
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-ALB-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-alb-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "ALB"
   })
 }
@@ -145,7 +145,7 @@ resource "aws_subnet" "gwlb" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-GWLB-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-gwlb-subnet-${count.index == 0 ? "a" : "b"}"
     Tier = "GWLB"
   })
 }
@@ -158,7 +158,7 @@ resource "aws_eip" "natgw" {
   domain = "vpc"
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-NATGW-EIP-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-natgw-eip-${count.index == 0 ? "a" : "b"}"
   })
 }
 
@@ -168,7 +168,7 @@ resource "aws_nat_gateway" "this" {
   subnet_id     = aws_subnet.natgw[count.index].id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-NATGW-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-natgw-${count.index == 0 ? "a" : "b"}"
   })
 
   depends_on = [aws_internet_gateway.this]
@@ -205,7 +205,7 @@ resource "aws_networkfirewall_rule_group" "stateless_drop_remote" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "dmz-stateless-drop-remote"
+    Name = "lab-dmzvpc-nfw-stateless-rg"
   })
 }
 
@@ -236,7 +236,7 @@ resource "aws_networkfirewall_rule_group" "stateful_allow" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "dmz-stateful-allow"
+    Name = "lab-dmzvpc-nfw-stateful-rg"
   })
 }
 
@@ -258,7 +258,7 @@ resource "aws_networkfirewall_firewall_policy" "this" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "dmz-firewall-policy"
+    Name = "lab-dmzvpc-nfw-policy"
   })
 }
 
@@ -275,7 +275,7 @@ resource "aws_networkfirewall_firewall" "this" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "dmz-network-firewall"
+    Name = "lab-dmzvpc-nfw"
   })
 }
 
@@ -296,7 +296,7 @@ resource "aws_route_table" "igw_ingress" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-IGW-Ingress-RT"
+    Name = "lab-${local.vpc_name}-igw-rt"
   })
 }
 
@@ -334,7 +334,7 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Public-RT"
+    Name = "lab-${local.vpc_name}-public-rt"
   })
 }
 
@@ -355,7 +355,7 @@ resource "aws_route_table" "alb" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-ALB-RT"
+    Name = "lab-${local.vpc_name}-alb-rt"
   })
 }
 
@@ -377,7 +377,7 @@ resource "aws_route_table" "fw" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-FW-RT-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-fw-rt-${count.index == 0 ? "a" : "b"}"
   })
 }
 
@@ -400,7 +400,7 @@ resource "aws_route_table" "natgw" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-NATGW-RT-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-natgw-rt-${count.index == 0 ? "a" : "b"}"
   })
 }
 
@@ -422,7 +422,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Private-RT"
+    Name = "lab-${local.vpc_name}-private-rt"
   })
 }
 
@@ -443,7 +443,7 @@ resource "aws_route_table" "data" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Data-RT"
+    Name = "lab-${local.vpc_name}-data-rt"
   })
 }
 
@@ -464,7 +464,7 @@ resource "aws_route_table" "attach" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Attach-RT"
+    Name = "lab-${local.vpc_name}-attach-rt"
   })
 }
 
@@ -479,7 +479,7 @@ resource "aws_route_table" "gwlb" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-GWLB-RT"
+    Name = "lab-${local.vpc_name}-gwlb-rt"
   })
 }
 
@@ -513,7 +513,7 @@ resource "aws_security_group" "vpce" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-VPCE-SG"
+    Name = "lab-${local.vpc_name}-vpce-sg"
   })
 }
 
@@ -526,7 +526,7 @@ resource "aws_vpc_endpoint" "ssm" {
   security_group_ids  = [aws_security_group.vpce.id]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-SSM-Endpoint"
+    Name = "lab-${local.vpc_name}-ssm-endpoint"
   })
 }
 
@@ -539,7 +539,7 @@ resource "aws_vpc_endpoint" "ssmmessages" {
   security_group_ids  = [aws_security_group.vpce.id]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-SSMMessages-Endpoint"
+    Name = "lab-${local.vpc_name}-ssmmessages-endpoint"
   })
 }
 
@@ -552,7 +552,7 @@ resource "aws_vpc_endpoint" "ec2messages" {
   security_group_ids  = [aws_security_group.vpce.id]
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-EC2Messages-Endpoint"
+    Name = "lab-${local.vpc_name}-ec2messages-endpoint"
   })
 }
 
@@ -576,7 +576,7 @@ resource "aws_iam_role" "ec2_ssm" {
   })
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-EC2-SSM-Role"
+    Name = "lab-${local.vpc_name}-ec2-ssm-role"
   })
 }
 
@@ -590,7 +590,7 @@ resource "aws_iam_instance_profile" "ec2_ssm" {
   role        = aws_iam_role.ec2_ssm.name
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-EC2-SSM-Profile"
+    Name = "lab-${local.vpc_name}-ec2-ssm-profile"
   })
 }
 
@@ -634,7 +634,7 @@ resource "aws_security_group" "ec2" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-EC2-SG"
+    Name = "lab-${local.vpc_name}-ec2-sg"
   })
 }
 
@@ -659,7 +659,7 @@ resource "aws_security_group" "alb" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-ALB-SG"
+    Name = "lab-${local.vpc_name}-alb-sg"
   })
 }
 
@@ -700,7 +700,7 @@ resource "aws_instance" "private" {
   )
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-Private-Instance-${count.index == 0 ? "A" : "B"}"
+    Name = "lab-${local.vpc_name}-private-ec2-${count.index == 0 ? "a1" : "b1"}"
   })
 }
 
@@ -715,7 +715,7 @@ resource "aws_lb" "this" {
   subnets            = aws_subnet.alb[*].id
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-ALB"
+    Name = "lab-${local.vpc_name}-alb"
   })
 }
 
@@ -736,7 +736,7 @@ resource "aws_lb_target_group" "this" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-TG"
+    Name = "lab-${local.vpc_name}-alb-tg"
   })
 }
 
@@ -758,7 +758,7 @@ resource "aws_lb_listener" "http" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-ALB-Listener"
+    Name = "lab-${local.vpc_name}-alb-listener"
   })
 }
 
@@ -822,6 +822,6 @@ resource "aws_cloudfront_distribution" "this" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${local.vpc_name}-CloudFront"
+    Name = "lab-${local.vpc_name}-cloudfront"
   })
 }

@@ -96,7 +96,7 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}"
+          Value: lab-vpc02
         - Key: Environment
           Value: lab
         - Key: Project
@@ -116,7 +116,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-Subnet-A"
+          Value: lab-vpc02-public-subnet-a
         - Key: kubernetes.io/role/elb
           Value: "1"
         - Key: Tier
@@ -131,7 +131,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-Subnet-B"
+          Value: lab-vpc02-public-subnet-b
         - Key: kubernetes.io/role/elb
           Value: "1"
         - Key: Tier
@@ -149,7 +149,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-Subnet-A"
+          Value: lab-vpc02-private-subnet-a
         - Key: kubernetes.io/role/internal-elb
           Value: "1"
         - Key: Tier
@@ -164,7 +164,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-Subnet-B"
+          Value: lab-vpc02-private-subnet-b
         - Key: kubernetes.io/role/internal-elb
           Value: "1"
         - Key: Tier
@@ -182,7 +182,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-Subnet-A"
+          Value: lab-vpc02-data-subnet-a
         - Key: Tier
           Value: data
 
@@ -195,7 +195,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-Subnet-B"
+          Value: lab-vpc02-data-subnet-b
         - Key: Tier
           Value: data
 
@@ -211,7 +211,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-Subnet-A"
+          Value: lab-vpc02-attach-subnet-a
         - Key: Tier
           Value: attach
 
@@ -224,7 +224,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-Subnet-B"
+          Value: lab-vpc02-attach-subnet-b
         - Key: Tier
           Value: attach
 
@@ -239,7 +239,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-A-RT"
+          Value: lab-vpc02-public-rt-a
         - Key: Environment
           Value: lab
         - Key: Project
@@ -259,7 +259,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Public-B-RT"
+          Value: lab-vpc02-public-rt-b
         - Key: Environment
           Value: lab
         - Key: Project
@@ -280,7 +280,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-A-RT"
+          Value: lab-vpc02-private-rt-a
         - Key: Environment
           Value: lab
         - Key: Project
@@ -300,7 +300,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Private-B-RT"
+          Value: lab-vpc02-private-rt-b
         - Key: Environment
           Value: lab
         - Key: Project
@@ -321,7 +321,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-A-RT"
+          Value: lab-vpc02-data-rt-a
         - Key: Environment
           Value: lab
         - Key: Project
@@ -341,7 +341,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Data-B-RT"
+          Value: lab-vpc02-data-rt-b
         - Key: Environment
           Value: lab
         - Key: Project
@@ -362,7 +362,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-A-RT"
+          Value: lab-vpc02-attach-rt-a
         - Key: Environment
           Value: lab
         - Key: Project
@@ -382,7 +382,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-Attach-B-RT"
+          Value: lab-vpc02-attach-rt-b
         - Key: Environment
           Value: lab
         - Key: Project
@@ -418,7 +418,7 @@ Resources:
           Description: ICMP from VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-SG"
+          Value: lab-vpc02-ec2-sg
         - Key: Environment
           Value: lab
         - Key: Project
@@ -440,7 +440,7 @@ Resources:
           Description: HTTPS from VPC
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-SSM-Endpoint-SG"
+          Value: lab-vpc02-ssm-endpoint-sg
         - Key: Environment
           Value: lab
         - Key: Project
@@ -509,7 +509,7 @@ Resources:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-Role"
+          Value: lab-vpc02-ec2-role
         - Key: Environment
           Value: lab
         - Key: Project
@@ -562,7 +562,7 @@ Resources:
           EOF
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-Private-A1"
+          Value: lab-vpc02-private-ec2-a01
         - Key: Environment
           Value: lab
         - Key: Project
@@ -606,7 +606,7 @@ Resources:
           EOF
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-EC2-Private-B1"
+          Value: lab-vpc02-private-ec2-b01
         - Key: Environment
           Value: lab
         - Key: Project

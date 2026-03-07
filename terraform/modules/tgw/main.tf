@@ -9,7 +9,7 @@ resource "aws_ec2_transit_gateway" "this" {
   auto_accept_shared_attachments  = "enable"
 
   tags = merge(var.common_tags, {
-    Name = "Lab-TGW"
+    Name = "lab-tgw"
   })
 }
 
@@ -25,7 +25,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "vpc01" {
   transit_gateway_default_route_table_propagation = true
 
   tags = merge(var.common_tags, {
-    Name = "TGW-Attach-VPC01"
+    Name = "lab-tgw-vpc01-attach"
   })
 }
 
@@ -38,7 +38,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "vpc02" {
   transit_gateway_default_route_table_propagation = true
 
   tags = merge(var.common_tags, {
-    Name = "TGW-Attach-VPC02"
+    Name = "lab-tgw-vpc02-attach"
   })
 }
 
@@ -51,7 +51,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "dmz" {
   transit_gateway_default_route_table_propagation = true
 
   tags = merge(var.common_tags, {
-    Name = "TGW-Attach-DMZ"
+    Name = "lab-tgw-dmzvpc-attach"
   })
 }
 

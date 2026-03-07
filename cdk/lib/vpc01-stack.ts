@@ -39,35 +39,35 @@ export class Vpc01Stack extends cdk.Stack {
       cidrBlock: config.cidr,
       enableDnsHostnames: true,
       enableDnsSupport: true,
-      tags: [{ key: 'Name', value: 'vpc-01' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01' }, ...this.toTags(tags)],
     });
     this.vpcId = this.vpc.ref;
 
     // ========================================================================
     // Subnets
     // ========================================================================
-    this.publicSubnetA = this.createSubnet('Vpc01PublicSubnetA', config.subnets.public.cidrA, azA, 'vpc01-public-a');
-    this.publicSubnetB = this.createSubnet('Vpc01PublicSubnetB', config.subnets.public.cidrB, azB, 'vpc01-public-b');
+    this.publicSubnetA = this.createSubnet('Vpc01PublicSubnetA', config.subnets.public.cidrA, azA, 'lab-vpc01-public-subnet-a');
+    this.publicSubnetB = this.createSubnet('Vpc01PublicSubnetB', config.subnets.public.cidrB, azB, 'lab-vpc01-public-subnet-b');
 
-    this.privateSubnetA = this.createSubnet('Vpc01PrivateSubnetA', config.subnets.private.cidrA, azA, 'vpc01-private-a');
-    this.privateSubnetB = this.createSubnet('Vpc01PrivateSubnetB', config.subnets.private.cidrB, azB, 'vpc01-private-b');
+    this.privateSubnetA = this.createSubnet('Vpc01PrivateSubnetA', config.subnets.private.cidrA, azA, 'lab-vpc01-private-subnet-a');
+    this.privateSubnetB = this.createSubnet('Vpc01PrivateSubnetB', config.subnets.private.cidrB, azB, 'lab-vpc01-private-subnet-b');
 
-    this.dataSubnetA = this.createSubnet('Vpc01DataSubnetA', config.subnets.data.cidrA, azA, 'vpc01-data-a');
-    this.dataSubnetB = this.createSubnet('Vpc01DataSubnetB', config.subnets.data.cidrB, azB, 'vpc01-data-b');
+    this.dataSubnetA = this.createSubnet('Vpc01DataSubnetA', config.subnets.data.cidrA, azA, 'lab-vpc01-data-subnet-a');
+    this.dataSubnetB = this.createSubnet('Vpc01DataSubnetB', config.subnets.data.cidrB, azB, 'lab-vpc01-data-subnet-b');
 
-    this.attachSubnetA = this.createSubnet('Vpc01AttachSubnetA', config.subnets.attach.cidrA, azA, 'vpc01-attach-a');
-    this.attachSubnetB = this.createSubnet('Vpc01AttachSubnetB', config.subnets.attach.cidrB, azB, 'vpc01-attach-b');
+    this.attachSubnetA = this.createSubnet('Vpc01AttachSubnetA', config.subnets.attach.cidrA, azA, 'lab-vpc01-attach-subnet-a');
+    this.attachSubnetB = this.createSubnet('Vpc01AttachSubnetB', config.subnets.attach.cidrB, azB, 'lab-vpc01-attach-subnet-b');
 
     // ========================================================================
     // Route Tables (no default route - TGW stack will add routes)
     // ========================================================================
     this.publicRouteTableA = new ec2.CfnRouteTable(this, 'Vpc01PublicRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-public-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-public-rt-a' }, ...this.toTags(tags)],
     });
     this.publicRouteTableB = new ec2.CfnRouteTable(this, 'Vpc01PublicRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-public-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-public-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'Vpc01PublicRtAssocA', {
       subnetId: this.publicSubnetA.ref,
@@ -80,11 +80,11 @@ export class Vpc01Stack extends cdk.Stack {
 
     this.privateRouteTableA = new ec2.CfnRouteTable(this, 'Vpc01PrivateRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-private-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-private-rt-a' }, ...this.toTags(tags)],
     });
     this.privateRouteTableB = new ec2.CfnRouteTable(this, 'Vpc01PrivateRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-private-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-private-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'Vpc01PrivateRtAssocA', {
       subnetId: this.privateSubnetA.ref,
@@ -97,11 +97,11 @@ export class Vpc01Stack extends cdk.Stack {
 
     this.dataRouteTableA = new ec2.CfnRouteTable(this, 'Vpc01DataRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-data-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-data-rt-a' }, ...this.toTags(tags)],
     });
     this.dataRouteTableB = new ec2.CfnRouteTable(this, 'Vpc01DataRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-data-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-data-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'Vpc01DataRtAssocA', {
       subnetId: this.dataSubnetA.ref,
@@ -114,11 +114,11 @@ export class Vpc01Stack extends cdk.Stack {
 
     this.attachRouteTableA = new ec2.CfnRouteTable(this, 'Vpc01AttachRtA', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-attach-rt-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-attach-rt-a' }, ...this.toTags(tags)],
     });
     this.attachRouteTableB = new ec2.CfnRouteTable(this, 'Vpc01AttachRtB', {
       vpcId: this.vpcId,
-      tags: [{ key: 'Name', value: 'vpc01-attach-rt-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-attach-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'Vpc01AttachRtAssocA', {
       subnetId: this.attachSubnetA.ref,
@@ -138,7 +138,7 @@ export class Vpc01Stack extends cdk.Stack {
       securityGroupIngress: [
         { ipProtocol: 'tcp', fromPort: 443, toPort: 443, cidrIp: config.cidr },
       ],
-      tags: [{ key: 'Name', value: 'vpc01-ssm-endpoint-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-ssm-endpoint-sg' }, ...this.toTags(tags)],
     });
 
     const endpointSubnets = [this.privateSubnetA.ref, this.privateSubnetB.ref];
@@ -190,7 +190,7 @@ export class Vpc01Stack extends cdk.Stack {
         { ipProtocol: 'tcp', fromPort: 443, toPort: 443, cidrIp: '10.0.0.0/8' },
         { ipProtocol: 'icmp', fromPort: -1, toPort: -1, cidrIp: '10.0.0.0/8' },
       ],
-      tags: [{ key: 'Name', value: 'vpc01-ec2-sg' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-ec2-sg' }, ...this.toTags(tags)],
     });
 
     const amznLinux2023 = ec2.MachineImage.latestAmazonLinux2023({
@@ -216,7 +216,7 @@ export class Vpc01Stack extends cdk.Stack {
       securityGroupIds: [ec2Sg.ref],
       iamInstanceProfile: instanceProfile.ref,
       userData: cdk.Fn.base64(userData.render()),
-      tags: [{ key: 'Name', value: 'vpc01-instance-a' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-private-ec2-a01' }, ...this.toTags(tags)],
     });
 
     new ec2.CfnInstance(this, 'Vpc01InstanceB', {
@@ -226,7 +226,7 @@ export class Vpc01Stack extends cdk.Stack {
       securityGroupIds: [ec2Sg.ref],
       iamInstanceProfile: instanceProfile.ref,
       userData: cdk.Fn.base64(userData.render()),
-      tags: [{ key: 'Name', value: 'vpc01-instance-b' }, ...this.toTags(tags)],
+      tags: [{ key: 'Name', value: 'lab-vpc01-private-ec2-b01' }, ...this.toTags(tags)],
     });
 
     // ========================================================================

@@ -24,10 +24,14 @@ Parameters:
     MaxLength: 41
   DBInstanceClass:
     Type: String
-    Default: db.t4g.medium
+    Default: db.r7g.large
+    Description: "Aurora instance class (Graviton preferred)"
     AllowedValues:
       - db.t4g.medium
       - db.t4g.large
+      - db.r7g.large
+      - db.r7g.xlarge
+      - db.r7g.2xlarge
       - db.r6g.large
       - db.r6g.xlarge
 

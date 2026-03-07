@@ -7,14 +7,15 @@ Parameters:
     Default: DMZVPC
   NodeType:
     Type: String
-    Default: cache.t4g.medium
+    Default: cache.r7g.large
+    Description: "ElastiCache node type (Graviton preferred)"
     AllowedValues:
-      - cache.t4g.micro
-      - cache.t4g.small
       - cache.t4g.medium
-      - cache.t3.micro
-      - cache.t3.small
-      - cache.t3.medium
+      - cache.t4g.large
+      - cache.r7g.large
+      - cache.r7g.xlarge
+      - cache.r6g.large
+      - cache.r6g.xlarge
 
 Resources:
   ValkeySubnetGroup:
