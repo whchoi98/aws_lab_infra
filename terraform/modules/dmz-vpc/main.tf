@@ -644,14 +644,6 @@ resource "aws_security_group" "alb" {
   vpc_id      = aws_vpc.this.id
 
   ingress {
-    description     = "HTTPS from CloudFront"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    prefix_list_ids = [var.cloudfront_prefix_list_id]
-  }
-
-  ingress {
     description     = "HTTP from CloudFront"
     from_port       = 80
     to_port         = 80
@@ -692,7 +684,7 @@ data "aws_ami" "amazon_linux_2023" {
 resource "aws_instance" "private" {
   count                  = length(var.private_subnets)
   ami                    = data.aws_ami.amazon_linux_2023.id
-  instance_type          = "t4g.micro"
+  instance_type          = "t4g.medium"
   subnet_id              = aws_subnet.private[count.index].id
   iam_instance_profile   = aws_iam_instance_profile.ec2_ssm.name
   vpc_security_group_ids = [aws_security_group.ec2.id]

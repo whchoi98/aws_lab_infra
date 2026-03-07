@@ -38,7 +38,7 @@ resource "aws_security_group" "aurora" {
 resource "aws_rds_cluster" "aurora" {
   cluster_identifier     = "lab-aurora-cluster"
   engine                 = "aurora-mysql"
-  engine_version         = "8.0.mysql_aurora.3.07.1"
+  engine_version         = "8.0.mysql_aurora.3.08.0"
   database_name          = "labdb"
   master_username        = "admin"
   master_password        = var.db_password
