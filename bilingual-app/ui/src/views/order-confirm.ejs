@@ -1,0 +1,15 @@
+<%- include('partials/header') %>
+
+<div class="order-confirm">
+  <div class="confirm-icon">✅</div>
+  <h1><%= t.order_success %></h1>
+  <% if (order && order.id) { %>
+    <p><%= t.order_id %>: <strong><%= order.id %></strong></p>
+  <% } %>
+  <div class="confirm-actions">
+    <a href="/orders" class="btn btn-primary"><%= t.orders %></a>
+    <a href="/catalog" class="btn btn-secondary"><%= t.continue_shopping %></a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

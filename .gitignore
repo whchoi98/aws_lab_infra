@@ -4,6 +4,5 @@ cdk.out/
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
-*.js
-!cdk.json
-*.d.ts
+cdk/**/*.js
+cdk/**/*.d.ts
