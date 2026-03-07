@@ -474,6 +474,18 @@ a:hover { color: var(--color-primary-hover); }
   max-width: 640px;
 }
 
+.form-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  margin-top: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.form-section-title:not(:first-of-type) { margin-top: 2rem; }
+
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 .form-group { margin-bottom: 1.5rem; }
 

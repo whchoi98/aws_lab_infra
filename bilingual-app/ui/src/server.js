@@ -178,13 +178,18 @@ app.get('/cart', async (req, res) => {
 
 // Checkout: place order (2-step: update → submit)
 app.post('/checkout/place-order', async (req, res) => {
-  const { first_name: firstName, last_name: lastName, email, address, city, zip } = req.body;
+  const { first_name: firstName, last_name: lastName, email, phone,
+          province, city, town, street, building, detail, zip } = req.body;
+
+  // Build full address string
+  const fullAddress = [province, city, town, street, building, detail].filter(Boolean).join(' ');
 
   // Calculate subtotal from cart
   let subtotal = 0;
+  let cartItems = [];
   try {
-    const cartItems = await callBackend(`${CARTS_URL}/carts/1/items`, req.id);
-    if (cartItems && Array.isArray(cartItems)) {
+    cartItems = await callBackend(`${CARTS_URL}/carts/1/items`, req.id) || [];
+    if (Array.isArray(cartItems)) {
       subtotal = cartItems.reduce((sum, item) => sum + (item.unitPrice || 0) * (item.quantity || 1), 0);
     }
   } catch (e) { /* default 0 */ }
@@ -196,12 +201,19 @@ app.post('/checkout/place-order', async (req, res) => {
     shippingAddress: {
       firstName: firstName || 'Guest',
       lastName: lastName || 'User',
-      address1: address || '123 Lab Street',
-      city: city || 'Seoul',
-      state: 'Seoul',
-      zip: zip || '12345',
+      address1: fullAddress || '서울특별시 강남구 테헤란로 152',
+      city: city || province || 'Seoul',
+      state: province || 'Seoul',
+      zip: zip || '06236',
     },
   };
+
+  logger.info({
+    action: 'checkout_address',
+    address: { province, city, town, street, building, detail, zip },
+    phone,
+    requestId: req.id,
+  }, 'address_detail');
   const checkoutSession = await callBackend(`${CHECKOUT_URL}/checkout/1/update`, req.id, 'post', updateData);
   logger.info({ action: 'checkout_update', email, subtotal, requestId: req.id }, 'order_action');
 

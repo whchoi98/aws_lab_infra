@@ -1,44 +1,74 @@
 <%- include('partials/header') %>
 
 <section class="checkout-page">
-  <h1 class="page-title"><%= t.checkout || 'Checkout' %></h1>
+  <h1 class="page-title"><%= t.checkout %></h1>
 
   <form action="/checkout/place-order" method="POST" class="checkout-form">
+    <h3 class="form-section-title">👤 <%= t.customer_info || (lang === 'ko' ? '주문자 정보' : 'Customer Info') %></h3>
     <div class="form-row">
       <div class="form-group">
-        <label for="first_name"><%= t.first_name || 'First Name' %></label>
-        <input type="text" id="first_name" name="first_name" required>
+        <label for="last_name"><%= t.last_name %></label>
+        <input type="text" id="last_name" name="last_name" placeholder="<%= lang === 'ko' ? '홍' : 'Kim' %>" required>
       </div>
       <div class="form-group">
-        <label for="last_name"><%= t.last_name || 'Last Name' %></label>
-        <input type="text" id="last_name" name="last_name" required>
+        <label for="first_name"><%= t.first_name %></label>
+        <input type="text" id="first_name" name="first_name" placeholder="<%= lang === 'ko' ? '길동' : 'Minjun' %>" required>
       </div>
     </div>
 
     <div class="form-group">
-      <label for="email"><%= t.email || 'Email' %></label>
-      <input type="email" id="email" name="email" required>
+      <label for="email"><%= t.email %></label>
+      <input type="email" id="email" name="email" placeholder="example@lab.shop" required>
     </div>
 
     <div class="form-group">
-      <label for="address"><%= t.address || 'Address' %></label>
-      <input type="text" id="address" name="address" required>
+      <label for="phone"><%= t.phone || (lang === 'ko' ? '연락처' : 'Phone') %></label>
+      <input type="tel" id="phone" name="phone" placeholder="<%= lang === 'ko' ? '010-1234-5678' : '010-1234-5678' %>">
+    </div>
+
+    <h3 class="form-section-title">📦 <%= t.shipping_address %></h3>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="zip"><%= t.zip %></label>
+        <input type="text" id="zip" name="zip" placeholder="<%= lang === 'ko' ? '06236' : '06236' %>" required>
+      </div>
+      <div class="form-group">
+        <label for="province"><%= t.province || (lang === 'ko' ? '시/도' : 'Province') %></label>
+        <input type="text" id="province" name="province" placeholder="<%= lang === 'ko' ? '서울특별시' : 'Seoul' %>" required>
+      </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label for="city"><%= t.city || 'City' %></label>
-        <input type="text" id="city" name="city" required>
+        <label for="city"><%= t.district || (lang === 'ko' ? '시/군/구' : 'City/District') %></label>
+        <input type="text" id="city" name="city" placeholder="<%= lang === 'ko' ? '강남구' : 'Gangnam-gu' %>" required>
       </div>
       <div class="form-group">
-        <label for="zip"><%= t.zip || 'Zip Code' %></label>
-        <input type="text" id="zip" name="zip" required>
+        <label for="town"><%= t.town || (lang === 'ko' ? '읍/면/동' : 'Town') %></label>
+        <input type="text" id="town" name="town" placeholder="<%= lang === 'ko' ? '역삼동' : 'Yeoksam-dong' %>">
       </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="street"><%= t.street || (lang === 'ko' ? '도로명' : 'Street') %></label>
+        <input type="text" id="street" name="street" placeholder="<%= lang === 'ko' ? '테헤란로 152' : 'Teheran-ro 152' %>" required>
+      </div>
+      <div class="form-group">
+        <label for="building"><%= t.building || (lang === 'ko' ? '건물번호' : 'Building No.') %></label>
+        <input type="text" id="building" name="building" placeholder="<%= lang === 'ko' ? '강남파이낸스센터' : 'Gangnam Finance Center' %>">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="detail"><%= t.address_detail || (lang === 'ko' ? '상세주소 (동/층/호)' : 'Detail (Bldg/Floor/Unit)') %></label>
+      <input type="text" id="detail" name="detail" placeholder="<%= lang === 'ko' ? '12층 1201호' : '12F, Unit 1201' %>">
     </div>
 
     <div class="checkout-actions">
-      <a href="/cart" class="btn btn-secondary">&larr; <%= t.back_to_cart || 'Back to Cart' %></a>
-      <button type="submit" class="btn btn-primary btn-lg"><%= t.place_order %></button>
+      <a href="/cart" class="btn btn-secondary">← <%= t.back_to_cart || (lang === 'ko' ? '장바구니로' : 'Back to Cart') %></a>
+      <button type="submit" class="btn btn-primary btn-lg">🛒 <%= t.place_order %></button>
     </div>
   </form>
 </section>
