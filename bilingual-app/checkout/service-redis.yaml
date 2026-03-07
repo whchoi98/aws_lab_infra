@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-redis
+  namespace: checkout
+  labels:
+    app: checkout-redis
+spec:
+  selector:
+    app: checkout-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+      protocol: TCP

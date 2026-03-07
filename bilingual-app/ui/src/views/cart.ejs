@@ -1,0 +1,70 @@
+<%- include('partials/header') %>
+
+<section class="cart-page">
+  <h1 class="page-title"><%= t.cart %></h1>
+
+  <% if (items && items.length > 0) { %>
+    <div class="cart-table-wrapper">
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th><%= t.product_name || 'Product' %></th>
+            <th><%= t.quantity || 'Qty' %></th>
+            <th><%= t.price || 'Price' %></th>
+            <th><%= t.subtotal || 'Subtotal' %></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% var total = 0; %>
+          <% items.forEach(function(item) { %>
+            <% var subtotal = item.quantity * item.price; %>
+            <% total += subtotal; %>
+            <tr>
+              <td><%= item.name %></td>
+              <td>
+                <form action="/cart/update" method="POST" class="qty-form">
+                  <input type="hidden" name="productId" value="<%= item.productId %>">
+                  <input type="number" name="quantity" value="<%= item.quantity %>" min="0" max="99" class="qty-input">
+                  <button type="submit" class="btn btn-sm"><%= t.update || 'Update' %></button>
+                </form>
+              </td>
+              <td>
+                <%= lang === 'ko' ? '₩' + Number(item.price).toLocaleString() : '$' + Number(item.price).toFixed(2) %>
+              </td>
+              <td>
+                <%= lang === 'ko' ? '₩' + subtotal.toLocaleString() : '$' + subtotal.toFixed(2) %>
+              </td>
+              <td>
+                <form action="/cart/remove" method="POST">
+                  <input type="hidden" name="productId" value="<%= item.productId %>">
+                  <button type="submit" class="btn btn-danger btn-sm">&times;</button>
+                </form>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" class="cart-total-label"><strong><%= t.total || 'Total' %></strong></td>
+            <td colspan="2" class="cart-total-value">
+              <strong><%= lang === 'ko' ? '₩' + total.toLocaleString() : '$' + total.toFixed(2) %></strong>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="cart-actions">
+      <a href="/catalog" class="btn btn-secondary"><%= t.continue_shopping %></a>
+      <a href="/checkout" class="btn btn-primary"><%= t.proceed_checkout %></a>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <p><%= t.cart_empty %></p>
+      <a href="/catalog" class="btn btn-primary"><%= t.continue_shopping %></a>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-redis
+  namespace: checkout
+  labels:
+    app: checkout-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-redis
+  template:
+    metadata:
+      labels:
+        app: checkout-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379

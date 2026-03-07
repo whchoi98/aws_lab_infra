@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog
+  namespace: catalog
+  labels:
+    app: catalog
+data:
+  DB_ENDPOINT: catalog-mysql
+  DB_PORT: "3306"
+  DB_NAME: sampledb
+  DB_READ_ENDPOINT: catalog-mysql

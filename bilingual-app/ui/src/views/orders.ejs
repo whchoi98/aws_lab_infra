@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+
+<section class="orders-page">
+  <h1 class="page-title"><%= t.orders %></h1>
+
+  <% if (orders && orders.length > 0) { %>
+    <div class="orders-table-wrapper">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th><%= t.order_id || 'Order ID' %></th>
+            <th><%= t.date || 'Date' %></th>
+            <th><%= t.status || 'Status' %></th>
+            <th><%= t.total || 'Total' %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% orders.forEach(function(order) { %>
+            <tr>
+              <td class="order-id"><%= order.id %></td>
+              <td><%= new Date(order.date).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US') %></td>
+              <td>
+                <span class="status-badge status-<%= (order.status || 'pending').toLowerCase() %>">
+                  <%= order.status %>
+                </span>
+              </td>
+              <td>
+                <%= lang === 'ko' ? '₩' + Number(order.total).toLocaleString() : '$' + Number(order.total).toFixed(2) %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <p><%= t.no_orders %></p>
+      <a href="/catalog" class="btn btn-primary"><%= t.continue_shopping %></a>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

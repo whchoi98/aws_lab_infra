@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: carts-dynamodb
+  namespace: carts
+  labels:
+    app: carts-dynamodb
+spec:
+  selector:
+    app: carts-dynamodb
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP

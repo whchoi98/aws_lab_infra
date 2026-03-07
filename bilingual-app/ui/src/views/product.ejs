@@ -1,0 +1,35 @@
+<%- include('partials/header') %>
+
+<section class="product-detail">
+  <a href="/catalog" class="back-link">&larr; <%= t.back %></a>
+
+  <div class="product-detail-layout">
+    <div class="product-detail-image">
+      <div class="image-placeholder large">
+        <span>📦</span>
+      </div>
+    </div>
+    <div class="product-detail-info">
+      <h1 class="product-detail-name"><%= product.name %></h1>
+      <% if (product.category) { %>
+        <span class="product-detail-category"><%= product.category %></span>
+      <% } %>
+      <p class="product-detail-price">
+        <%= lang === 'ko' ? '₩' + Number(product.price).toLocaleString() : '$' + Number(product.price).toFixed(2) %>
+      </p>
+      <% if (product.description) { %>
+        <p class="product-detail-desc"><%= product.description %></p>
+      <% } %>
+      <form action="/cart/add" method="POST" class="add-to-cart-form">
+        <input type="hidden" name="productId" value="<%= product.id %>">
+        <div class="quantity-group">
+          <label for="quantity"><%= t.quantity || 'Qty' %></label>
+          <input type="number" id="quantity" name="quantity" value="1" min="1" max="99">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg"><%= t.add_to_cart %></button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

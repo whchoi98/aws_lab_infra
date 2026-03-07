@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= t.site_name %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand"><%= t.site_name %></a>
+      <div class="nav-links">
+        <a href="/"><%= t.home %></a>
+        <a href="/catalog"><%= t.catalog %></a>
+        <a href="/cart">🛒 <%= t.cart %></a>
+        <a href="/orders"><%= t.orders %></a>
+      </div>
+      <div class="nav-lang">
+        <a href="?lang=<%= lang === 'ko' ? 'en' : 'ko' %>" class="lang-switch">
+          🌐 <%= t.lang_switch %>
+        </a>
+      </div>
+    </div>
+  </nav>
+  <main class="container">

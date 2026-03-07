@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-postgresql
+  namespace: orders
+  labels:
+    app: orders-postgresql
+spec:
+  selector:
+    app: orders-postgresql
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP

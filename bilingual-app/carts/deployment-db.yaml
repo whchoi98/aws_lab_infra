@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carts-dynamodb
+  namespace: carts
+  labels:
+    app: carts-dynamodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carts-dynamodb
+  template:
+    metadata:
+      labels:
+        app: carts-dynamodb
+    spec:
+      containers:
+        - name: dynamodb-local
+          image: amazon/dynamodb-local:2.0.0
+          ports:
+            - containerPort: 8000

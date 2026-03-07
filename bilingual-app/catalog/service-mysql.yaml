@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-mysql
+  namespace: catalog
+  labels:
+    app: catalog-mysql
+spec:
+  selector:
+    app: catalog-mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+      protocol: TCP
