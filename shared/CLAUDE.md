@@ -1,0 +1,17 @@
+# Shared Module
+
+3가지 IaC 방식에서 공통으로 사용하는 리소스.
+
+## Structure
+- `bilingual-app/` — 한/영 쇼핑몰 (Node.js Express + Kustomize)
+- `base-application/` — 원본 Retail Store Sample (영어)
+- `deploy-app.sh` — 앱 배포 (base/bilingual 선택, Docker 빌드 포함)
+- `check-prerequisites.sh` — aws, eksctl, kubectl, helm, jq, python3 점검/설치
+- `setup-test-profiles.sh` — 3계정 AWS CLI 프로파일 설정
+
+## bilingual-app UI
+- `ui/src/server.js` — Express SSR + pino JSON logging
+- `ui/src/locales/ko.json`, `en.json` — i18n 번역
+- `ui/src/views/` — EJS 템플릿
+- `ui/Dockerfile` — Multi-stage node:20-alpine
+- Docker 이미지: `<account>.dkr.ecr.<region>.amazonaws.com/lab-shop-ui`
