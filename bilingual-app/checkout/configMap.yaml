@@ -8,3 +8,4 @@ metadata:
 data:
   REDIS_URL: redis://checkout-redis:6379
   ENDPOINTS_ORDERS: http://orders.orders:80
+  ENDPOINTS_CARTS: http://carts.carts:80

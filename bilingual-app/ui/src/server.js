@@ -205,26 +205,33 @@ app.post('/checkout/place-order', async (req, res) => {
   const checkoutSession = await callBackend(`${CHECKOUT_URL}/checkout/1/update`, req.id, 'post', updateData);
   logger.info({ action: 'checkout_update', email, subtotal, requestId: req.id }, 'order_action');
 
-  // Step 2: Submit order
-  const result = await callBackend(`${CHECKOUT_URL}/checkout/1/submit`, req.id, 'post', {});
-  logger.info({ action: 'place_order', email, total: checkoutSession?.total, requestId: req.id }, 'order_action');
-
-  // Clear cart after order (delete items one by one since bulk DELETE is not supported)
+  // Step 2: Create order directly via orders service (bypass checkout submit)
+  let cartItems = [];
   try {
-    const remainingItems = await callBackend(`${CARTS_URL}/carts/1/items`, req.id);
-    if (remainingItems && Array.isArray(remainingItems)) {
-      for (const item of remainingItems) {
-        await callBackend(`${CARTS_URL}/carts/1/items/${item.itemId}`, req.id, 'delete');
-      }
-    }
-  } catch (e) { /* best effort */ }
+    cartItems = await callBackend(`${CARTS_URL}/carts/1/items`, req.id) || [];
+  } catch (e) { /* empty */ }
 
-  if (result && !result.statusCode) {
-    res.render('order-confirm', { order: result });
-  } else {
-    // Even if submit fails (orders service issue), show confirmation with session data
-    res.render('order-confirm', { order: { id: checkoutSession?.paymentId || 'pending', total: checkoutSession?.total } });
+  const orderPayload = {
+    firstName: firstName || 'Guest',
+    lastName: lastName || 'User',
+    email: email || 'guest@lab.shop',
+    items: cartItems.map(item => ({
+      itemId: item.itemId,
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || 0,
+    })),
+  };
+  const result = await callBackend(`${ORDERS_URL}/orders`, req.id, 'post', orderPayload);
+  logger.info({ action: 'place_order', email, total: checkoutSession?.total, items: cartItems.length, requestId: req.id }, 'order_action');
+
+  // Clear cart after order (delete items one by one)
+  for (const item of cartItems) {
+    await callBackend(`${CARTS_URL}/carts/1/items/${item.itemId}`, req.id, 'delete');
   }
+
+  const orderId = result?.id || checkoutSession?.paymentId || 'pending';
+  const total = checkoutSession?.total || subtotal;
+  res.render('order-confirm', { order: { id: orderId, total } });
 });
 
 app.get('/orders', async (req, res) => {
