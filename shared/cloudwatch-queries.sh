@@ -90,6 +90,16 @@ case "${QUERY_NAME}" in
     echo "    node-network      노드 네트워크 트래픽"
     echo "    container-errors  컨테이너 에러 로그"
     echo ""
+    echo "  DB Insights (Aurora):"
+    echo "    db-slow-queries   느린 쿼리 (> 1초)"
+    echo "    db-connections    DB 연결 수"
+    echo "    db-cpu            DB CPU 사용률"
+    echo ""
+    echo "  Lambda Insights:"
+    echo "    lambda-errors     Lambda 에러 로그"
+    echo "    lambda-duration   Lambda 실행 시간"
+    echo "    lambda-cold-starts Lambda Cold Start"
+    echo ""
     echo "  인프라:"
     echo "    nfw-alerts        Network Firewall 알림"
     echo "    nfw-flow          Network Firewall 플로우"
@@ -176,6 +186,75 @@ case "${QUERY_NAME}" in
     run_query "${APP_LOG}" \
       "fields @timestamp, kubernetes.container_name, kubernetes.namespace_name, log | filter log like /error|Error|ERROR|panic|FATAL|exception/ | sort @timestamp desc | limit 20" \
       "컨테이너 에러 로그"
+    ;;
+
+  # === DB Insights ===
+  db-slow-queries)
+    run_query "/aws/rds/cluster/lab-aurora-cluster/audit" \
+      "fields @timestamp, @message | filter @message like /Query/ | parse @message 'query_time=* ' as qt | filter qt > 1 | sort qt desc | limit 20" \
+      "Aurora 느린 쿼리 (> 1초)"
+    ;;
+
+  db-connections)
+    echo "━━━ Aurora 연결 수 ━━━"
+    echo "  CloudWatch 콘솔에서 확인:"
+    echo "  RDS > Performance Insights > eksworkshop"
+    echo "  메트릭: DatabaseConnections, CPUUtilization, FreeableMemory"
+    echo ""
+    aws cloudwatch get-metric-statistics --namespace AWS/RDS \
+      --metric-name DatabaseConnections --dimensions Name=DBClusterIdentifier,Value=lab-aurora-cluster \
+      --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+      --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+      --period 300 --statistics Average \
+      --region ${REGION} --profile ${PROFILE} 2>/dev/null | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for p in sorted(d.get('Datapoints',[]), key=lambda x: x['Timestamp']):
+    print(f\"  {p['Timestamp'][:19]} Connections: {p['Average']:.0f}\")
+" 2>/dev/null || echo "  (데이터 수집 중)"
+    ;;
+
+  db-cpu)
+    echo "━━━ Aurora CPU 사용률 ━━━"
+    aws cloudwatch get-metric-statistics --namespace AWS/RDS \
+      --metric-name CPUUtilization --dimensions Name=DBClusterIdentifier,Value=lab-aurora-cluster \
+      --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+      --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+      --period 300 --statistics Average \
+      --region ${REGION} --profile ${PROFILE} 2>/dev/null | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for p in sorted(d.get('Datapoints',[]), key=lambda x: x['Timestamp']):
+    print(f\"  {p['Timestamp'][:19]} CPU: {p['Average']:.1f}%\")
+" 2>/dev/null || echo "  (데이터 수집 중)"
+    ;;
+
+  # === Lambda Insights ===
+  lambda-errors)
+    for FUNC in $(aws lambda list-functions --query "Functions[?!contains(FunctionName,\`WSConcurrency\`)].FunctionName" \
+      --output text --region ${REGION} --profile ${PROFILE} 2>/dev/null); do
+      run_query "/aws/lambda/${FUNC}" \
+        "fields @timestamp, @message | filter @message like /ERROR|Error|error/ | sort @timestamp desc | limit 10" \
+        "Lambda ${FUNC} 에러"
+    done
+    ;;
+
+  lambda-duration)
+    for FUNC in $(aws lambda list-functions --query "Functions[?!contains(FunctionName,\`WSConcurrency\`)].FunctionName" \
+      --output text --region ${REGION} --profile ${PROFILE} 2>/dev/null); do
+      run_query "/aws/lambda/${FUNC}" \
+        "filter @type = 'REPORT' | stats avg(@duration) as avg_ms, max(@duration) as max_ms, count(*) as invocations by bin(5m)" \
+        "Lambda ${FUNC} 실행 시간"
+    done
+    ;;
+
+  lambda-cold-starts)
+    for FUNC in $(aws lambda list-functions --query "Functions[?!contains(FunctionName,\`WSConcurrency\`)].FunctionName" \
+      --output text --region ${REGION} --profile ${PROFILE} 2>/dev/null); do
+      run_query "/aws/lambda/${FUNC}" \
+        "filter @type = 'REPORT' | filter @initDuration > 0 | stats count(*) as cold_starts, avg(@initDuration) as avg_init_ms by bin(5m)" \
+        "Lambda ${FUNC} Cold Start"
+    done
     ;;
 
   # === 인프라 ===
