@@ -128,6 +128,25 @@ docker build -t lab-shop-ui:latest .
 - Karpenter v1.9.0 (arm64 전용 NodePool)
 - LBC v2.13 (Helm chart 1.13.0)
 
+### EKS Addons (15개)
+| Category | Addon | Version |
+|----------|-------|---------|
+| Networking | vpc-cni | latest |
+| Networking | coredns | latest |
+| Networking | kube-proxy | latest |
+| Storage | aws-ebs-csi-driver | latest |
+| Storage | aws-efs-csi-driver | v2.3.0 |
+| Storage | aws-fsx-csi-driver | v1.8.0 |
+| Storage | aws-mountpoint-s3-csi-driver | v2.3.0 |
+| Storage | snapshot-controller | v8.5.0 |
+| Observability | amazon-cloudwatch-observability | v4.10.1 |
+| Observability | adot (OpenTelemetry) | v0.141.0 |
+| Observability | eks-node-monitoring-agent | v1.5.2 |
+| Observability | aws-network-flow-monitoring-agent | v1.1.3 |
+| Observability | metrics-server | latest |
+| Security | aws-guardduty-agent | v1.12.1 |
+| Security | eks-pod-identity-agent | latest |
+
 ## Auto-Sync Rules
 
 When exiting Plan Mode after making changes:

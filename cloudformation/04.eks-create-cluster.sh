@@ -162,6 +162,7 @@ iam:
   withOIDC: true
 
 addons:
+  # Networking
   - name: vpc-cni
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
@@ -169,9 +170,32 @@ addons:
     version: latest
   - name: kube-proxy
     version: latest
+  # Storage
   - name: aws-ebs-csi-driver
     wellKnownPolicies:
       ebsCSIController: true
+  - name: aws-efs-csi-driver
+    version: latest
+  - name: aws-fsx-csi-driver
+    version: latest
+  - name: aws-mountpoint-s3-csi-driver
+    version: latest
+  - name: snapshot-controller
+    version: latest
+  # Observability
+  - name: amazon-cloudwatch-observability
+    version: latest
+  - name: adot
+    version: latest
+  - name: eks-node-monitoring-agent
+    version: latest
+  - name: aws-network-flow-monitoring-agent
+    version: latest
+  # Security
+  - name: aws-guardduty-agent
+    version: latest
+  - name: eks-pod-identity-agent
+    version: latest
 YAML_EOF
 
 echo "  ✅ 설정 파일 생성: ${CLUSTER_CONFIG}"
