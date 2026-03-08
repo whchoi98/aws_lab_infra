@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudFront → ALB protection for EKS bilingual-app.
+  Restricts ALB to CloudFront Prefix List + X-Lab-Secret custom header.
+
+Parameters:
+  ALBDnsName:
+    Type: String
+    Description: EKS ALB DNS Name (from kubectl get ingress)
+
+  ALBSecurityGroupId:
+    Type: String
+    Description: ALB Security Group ID to restrict
+
+  CloudFrontPrefixListId:
+    Type: String
+    Description: CloudFront origin-facing managed prefix list ID
+
+Resources:
+  # Restrict ALB SG to CloudFront Prefix List only
+  ALBSGIngressFromCloudFront:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ALBSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      SourcePrefixListId: !Ref CloudFrontPrefixListId
+      Description: HTTP from CloudFront origin-facing only
+
+  # CloudFront Distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "Lab Shop (${ALBDnsName})"
+        Origins:
+          - Id: ALBOrigin
+            DomainName: !Ref ALBDnsName
+            CustomOriginConfig:
+              HTTPPort: 80
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 60
+              OriginKeepaliveTimeout: 5
+            OriginCustomHeaders:
+              - HeaderName: X-Lab-Secret
+                HeaderValue: !Sub '${AWS::StackName}-secret-${AWS::AccountId}'
+        DefaultCacheBehavior:
+          TargetOriginId: ALBOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: all
+            Headers:
+              - '*'
+          MinTTL: 0
+          DefaultTTL: 0
+          MaxTTL: 0
+        PriceClass: PriceClass_200
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Name
+          Value: lab-shop-cloudfront
+        - Key: Environment
+          Value: lab
+
+Outputs:
+  CloudFrontURL:
+    Description: CloudFront URL (use this to access the shop)
+    Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+
+  CloudFrontDomainName:
+    Description: CloudFront Domain Name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+
+  CustomHeaderSecret:
+    Description: Custom header secret for ALB validation
+    Value: !Sub '${AWS::StackName}-secret-${AWS::AccountId}'
+
+  AccessInstructions:
+    Description: Access instructions
+    Value: !Sub |
+      1. Shop URL: https://${CloudFrontDistribution.DomainName}
+      2. Direct ALB: BLOCKED (requires CloudFront + X-Lab-Secret)
+      3. Security: CloudFront Prefix List + Custom Header
