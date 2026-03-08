@@ -65,15 +65,11 @@ Resources:
         - Key: Environment
           Value: lab
 
-  OpenSearchServiceLinkedRole:
-    Type: AWS::IAM::ServiceLinkedRole
-    Properties:
-      AWSServiceName: es.amazonaws.com
-      Description: "Role for OpenSearch to access VPC resources"
+  # Note: Service-linked role (AWSServiceRoleForAmazonElasticsearchService)
+  # is created via AWS CLI before stack deployment
 
   OpenSearchDomain:
     Type: AWS::OpenSearchService::Domain
-    DependsOn: OpenSearchServiceLinkedRole
     Properties:
       DomainName: !Ref DomainName
       EngineVersion: "OpenSearch_2.17"
