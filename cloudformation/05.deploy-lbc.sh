@@ -18,7 +18,7 @@ REGION="${AWS_REGION:-ap-northeast-2}"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 POLICY_NAME="AWSLoadBalancerControllerIAMPolicy"
 POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/${POLICY_NAME}"
-LBC_VERSION="v2.11.0"
+LBC_VERSION="v3.1.0"
 
 echo "============================================"
 echo "  AWS Load Balancer Controller 배포"

@@ -126,7 +126,7 @@ docker build -t lab-shop-ui:latest .
 ### EKS
 - Pod Identity (IRSA 대체)
 - Karpenter v1.9.0 (arm64 전용 NodePool)
-- LBC v2.13 (Helm chart 1.13.0)
+- LBC v3.1.0 (Helm chart 3.1.0)
 
 ### EKS Addons (15개)
 | Category | Addon | Version |
