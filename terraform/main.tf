@@ -80,6 +80,8 @@ module "tgw" {
   vpc02_data_rt_id      = module.vpc02.data_route_table_id
   dmz_private_rt_id     = module.dmz_vpc.private_route_table_id
   dmz_data_rt_id        = module.dmz_vpc.data_route_table_id
+  dmz_attach_rt_id      = module.dmz_vpc.attach_route_table_id
+  dmz_natgw_rt_ids      = module.dmz_vpc.natgw_route_table_ids
 
   vpc01_cidr            = var.vpc01_cidr
   vpc02_cidr            = var.vpc02_cidr

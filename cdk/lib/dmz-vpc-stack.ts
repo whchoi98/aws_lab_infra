@@ -29,6 +29,8 @@ export class DmzVpcStack extends cdk.Stack {
   public readonly dataRouteTableB: ec2.CfnRouteTable;
   public readonly attachRouteTableA: ec2.CfnRouteTable;
   public readonly attachRouteTableB: ec2.CfnRouteTable;
+  public readonly natgwRouteTableA: ec2.CfnRouteTable;
+  public readonly natgwRouteTableB: ec2.CfnRouteTable;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -442,30 +444,30 @@ def handler(event, context):
     });
 
     // --- NATGW Route Tables ---
-    const natgwRtA = new ec2.CfnRouteTable(this, 'DmzNatgwRtA', {
+    this.natgwRouteTableA = new ec2.CfnRouteTable(this, 'DmzNatgwRtA', {
       vpcId: this.vpcId,
       tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-rt-a' }, ...this.toTags(tags)],
     });
-    const natgwRtB = new ec2.CfnRouteTable(this, 'DmzNatgwRtB', {
+    this.natgwRouteTableB = new ec2.CfnRouteTable(this, 'DmzNatgwRtB', {
       vpcId: this.vpcId,
       tags: [{ key: 'Name', value: 'lab-dmzvpc-natgw-rt-b' }, ...this.toTags(tags)],
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzNatgwRtAssocA', {
       subnetId: natgwSubnetA.ref,
-      routeTableId: natgwRtA.ref,
+      routeTableId: this.natgwRouteTableA.ref,
     });
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzNatgwRtAssocB', {
       subnetId: natgwSubnetB.ref,
-      routeTableId: natgwRtB.ref,
+      routeTableId: this.natgwRouteTableB.ref,
     });
     // NATGW subnets route to IGW
     new ec2.CfnRoute(this, 'NatgwToIgwA', {
-      routeTableId: natgwRtA.ref,
+      routeTableId: this.natgwRouteTableA.ref,
       destinationCidrBlock: '0.0.0.0/0',
       gatewayId: igw.ref,
     });
     new ec2.CfnRoute(this, 'NatgwToIgwB', {
-      routeTableId: natgwRtB.ref,
+      routeTableId: this.natgwRouteTableB.ref,
       destinationCidrBlock: '0.0.0.0/0',
       gatewayId: igw.ref,
     });
@@ -544,6 +546,17 @@ def handler(event, context):
     new ec2.CfnSubnetRouteTableAssociation(this, 'DmzAttachRtAssocB', {
       subnetId: this.attachSubnetB.ref,
       routeTableId: this.attachRouteTableB.ref,
+    });
+    // Attach subnets route to NAT GW (for return traffic from TGW to internet)
+    new ec2.CfnRoute(this, 'AttachToNatA', {
+      routeTableId: this.attachRouteTableA.ref,
+      destinationCidrBlock: '0.0.0.0/0',
+      natGatewayId: natGwA.ref,
+    });
+    new ec2.CfnRoute(this, 'AttachToNatB', {
+      routeTableId: this.attachRouteTableB.ref,
+      destinationCidrBlock: '0.0.0.0/0',
+      natGatewayId: natGwB.ref,
     });
 
     // ========================================================================

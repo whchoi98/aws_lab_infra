@@ -474,6 +474,13 @@ resource "aws_route_table_association" "attach" {
   route_table_id = aws_route_table.attach.id
 }
 
+# Attach subnet default route to NAT GW (for return traffic from TGW to internet)
+resource "aws_route" "attach_default" {
+  route_table_id         = aws_route_table.attach.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.this[0].id
+}
+
 # GWLB Route Table
 resource "aws_route_table" "gwlb" {
   vpc_id = aws_vpc.this.id

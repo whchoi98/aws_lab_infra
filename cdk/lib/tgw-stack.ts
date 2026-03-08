@@ -145,6 +145,44 @@ export class TgwStack extends cdk.Stack {
     }).addDependency(dmzAttachment);
 
     // ========================================================================
+    // DMZ NATGW Subnet return routes: VPC01/VPC02 CIDRs → TGW
+    // ========================================================================
+    new ec2.CfnRoute(this, 'DmzNatgwToVpc01A', {
+      routeTableId: props.dmzVpcStack.natgwRouteTableA.ref,
+      destinationCidrBlock: LAB_CONFIG.vpc01.cidr,
+      transitGatewayId: this.transitGateway.ref,
+    }).addDependency(dmzAttachment);
+
+    new ec2.CfnRoute(this, 'DmzNatgwToVpc01B', {
+      routeTableId: props.dmzVpcStack.natgwRouteTableB.ref,
+      destinationCidrBlock: LAB_CONFIG.vpc01.cidr,
+      transitGatewayId: this.transitGateway.ref,
+    }).addDependency(dmzAttachment);
+
+    new ec2.CfnRoute(this, 'DmzNatgwToVpc02A', {
+      routeTableId: props.dmzVpcStack.natgwRouteTableA.ref,
+      destinationCidrBlock: LAB_CONFIG.vpc02.cidr,
+      transitGatewayId: this.transitGateway.ref,
+    }).addDependency(dmzAttachment);
+
+    new ec2.CfnRoute(this, 'DmzNatgwToVpc02B', {
+      routeTableId: props.dmzVpcStack.natgwRouteTableB.ref,
+      destinationCidrBlock: LAB_CONFIG.vpc02.cidr,
+      transitGatewayId: this.transitGateway.ref,
+    }).addDependency(dmzAttachment);
+
+    // ========================================================================
+    // TGW Default Route: 0.0.0.0/0 → DMZ VPC attachment
+    // ========================================================================
+    // Since defaultRouteTableAssociation is enabled, we use the TGW's
+    // association default route table. We retrieve it via Fn.getAtt.
+    const tgwDefaultRouteTable = new ec2.CfnTransitGatewayRoute(this, 'TgwDefaultRoute', {
+      transitGatewayRouteTableId: cdk.Fn.getAtt(this.transitGateway.logicalId, 'AssociationDefaultRouteTableId').toString(),
+      destinationCidrBlock: '0.0.0.0/0',
+      transitGatewayAttachmentId: dmzAttachment.ref,
+    });
+
+    // ========================================================================
     // VPC01 Routes: 0.0.0.0/0 + VPC02 CIDR via TGW
     // ========================================================================
     // VPC01 Private -> default route via TGW

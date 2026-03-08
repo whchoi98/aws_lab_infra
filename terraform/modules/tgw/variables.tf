@@ -69,6 +69,16 @@ variable "dmz_data_rt_id" {
   type        = string
 }
 
+variable "dmz_attach_rt_id" {
+  description = "DMZ VPC attach route table ID"
+  type        = string
+}
+
+variable "dmz_natgw_rt_ids" {
+  description = "DMZ VPC NAT GW route table IDs (per AZ)"
+  type        = list(string)
+}
+
 # CIDRs for route creation
 variable "vpc01_cidr" {
   description = "VPC01 CIDR"

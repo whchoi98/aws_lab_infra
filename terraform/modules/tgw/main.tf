@@ -234,3 +234,50 @@ resource "aws_route" "dmz_data_to_vpc02" {
 
   depends_on = [aws_ec2_transit_gateway_vpc_attachment.dmz]
 }
+
+# DMZ Attach -> VPC01/VPC02
+resource "aws_route" "dmz_attach_to_vpc01" {
+  route_table_id         = var.dmz_attach_rt_id
+  destination_cidr_block = var.vpc01_cidr
+  transit_gateway_id     = aws_ec2_transit_gateway.this.id
+
+  depends_on = [aws_ec2_transit_gateway_vpc_attachment.dmz]
+}
+
+resource "aws_route" "dmz_attach_to_vpc02" {
+  route_table_id         = var.dmz_attach_rt_id
+  destination_cidr_block = var.vpc02_cidr
+  transit_gateway_id     = aws_ec2_transit_gateway.this.id
+
+  depends_on = [aws_ec2_transit_gateway_vpc_attachment.dmz]
+}
+
+# -------------------------------------------------------
+# DMZ NATGW Subnet return routes (VPC01/VPC02 CIDRs → TGW)
+# -------------------------------------------------------
+resource "aws_route" "dmz_natgw_to_vpc01" {
+  count                  = length(var.dmz_natgw_rt_ids)
+  route_table_id         = var.dmz_natgw_rt_ids[count.index]
+  destination_cidr_block = var.vpc01_cidr
+  transit_gateway_id     = aws_ec2_transit_gateway.this.id
+
+  depends_on = [aws_ec2_transit_gateway_vpc_attachment.dmz]
+}
+
+resource "aws_route" "dmz_natgw_to_vpc02" {
+  count                  = length(var.dmz_natgw_rt_ids)
+  route_table_id         = var.dmz_natgw_rt_ids[count.index]
+  destination_cidr_block = var.vpc02_cidr
+  transit_gateway_id     = aws_ec2_transit_gateway.this.id
+
+  depends_on = [aws_ec2_transit_gateway_vpc_attachment.dmz]
+}
+
+# -------------------------------------------------------
+# TGW Default Route: 0.0.0.0/0 → DMZ VPC attachment
+# -------------------------------------------------------
+resource "aws_ec2_transit_gateway_route" "default_to_dmz" {
+  destination_cidr_block         = "0.0.0.0/0"
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.dmz.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway.this.association_default_route_table_id
+}
