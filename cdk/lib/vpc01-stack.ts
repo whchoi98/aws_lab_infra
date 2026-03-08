@@ -229,6 +229,26 @@ export class Vpc01Stack extends cdk.Stack {
       tags: [{ key: 'Name', value: 'lab-vpc01-private-ec2-b01' }, ...this.toTags(tags)],
     });
 
+    new ec2.CfnInstance(this, 'Vpc01InstanceA2', {
+      instanceType: 't4g.large',
+      imageId: amznLinux2023.getImage(this).imageId,
+      subnetId: this.privateSubnetA.ref,
+      securityGroupIds: [ec2Sg.ref],
+      iamInstanceProfile: instanceProfile.ref,
+      userData: cdk.Fn.base64(userData.render()),
+      tags: [{ key: 'Name', value: 'lab-vpc01-private-ec2-a02' }, ...this.toTags(tags)],
+    });
+
+    new ec2.CfnInstance(this, 'Vpc01InstanceB2', {
+      instanceType: 't4g.large',
+      imageId: amznLinux2023.getImage(this).imageId,
+      subnetId: this.privateSubnetB.ref,
+      securityGroupIds: [ec2Sg.ref],
+      iamInstanceProfile: instanceProfile.ref,
+      userData: cdk.Fn.base64(userData.render()),
+      tags: [{ key: 'Name', value: 'lab-vpc01-private-ec2-b02' }, ...this.toTags(tags)],
+    });
+
     // ========================================================================
     // Stack Outputs
     // ========================================================================

@@ -689,10 +689,10 @@ data "aws_ami" "amazon_linux_2023" {
 }
 
 resource "aws_instance" "private" {
-  count                  = length(var.private_subnets)
+  count                  = length(var.private_subnets) * 2
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "t4g.large"
-  subnet_id              = aws_subnet.private[count.index].id
+  subnet_id              = aws_subnet.private[count.index % length(var.private_subnets)].id
   iam_instance_profile   = aws_iam_instance_profile.ec2_ssm.name
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
@@ -702,12 +702,12 @@ resource "aws_instance" "private" {
     systemctl enable httpd
     systemctl start httpd
     INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
-    echo "<h1>DMZ-VPC - Instance $INSTANCE_ID</h1><p>AZ: ${var.azs[count.index]}</p>" > /var/www/html/index.html
+    echo "<h1>DMZ-VPC - Instance $INSTANCE_ID</h1><p>AZ: ${var.azs[count.index % length(var.private_subnets)]}</p>" > /var/www/html/index.html
   EOF
   )
 
   tags = merge(var.common_tags, {
-    Name = "lab-${local.vpc_name}-private-ec2-${count.index == 0 ? "a1" : "b1"}"
+    Name = "lab-${local.vpc_name}-private-ec2-${count.index % 2 == 0 ? "a" : "b"}${format("%02d", floor(count.index / 2) + 1)}"
   })
 }
 
@@ -748,7 +748,7 @@ resource "aws_lb_target_group" "this" {
 }
 
 resource "aws_lb_target_group_attachment" "this" {
-  count            = length(var.private_subnets)
+  count            = length(var.private_subnets) * 2
   target_group_arn = aws_lb_target_group.this.arn
   target_id        = aws_instance.private[count.index].id
   port             = 80

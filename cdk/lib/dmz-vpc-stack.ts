@@ -659,6 +659,26 @@ def handler(event, context):
       tags: [{ key: 'Name', value: 'lab-dmzvpc-private-ec2-b01' }, ...this.toTags(tags)],
     });
 
+    const instanceC = new ec2.CfnInstance(this, 'DmzInstanceC', {
+      instanceType: 't4g.large',
+      imageId: amznLinux2023.getImage(this).imageId,
+      subnetId: this.privateSubnetA.ref,
+      securityGroupIds: [ec2Sg.ref],
+      iamInstanceProfile: instanceProfile.ref,
+      userData: cdk.Fn.base64(userData.render()),
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-private-ec2-a02' }, ...this.toTags(tags)],
+    });
+
+    const instanceD = new ec2.CfnInstance(this, 'DmzInstanceD', {
+      instanceType: 't4g.large',
+      imageId: amznLinux2023.getImage(this).imageId,
+      subnetId: this.privateSubnetB.ref,
+      securityGroupIds: [ec2Sg.ref],
+      iamInstanceProfile: instanceProfile.ref,
+      userData: cdk.Fn.base64(userData.render()),
+      tags: [{ key: 'Name', value: 'lab-dmzvpc-private-ec2-b02' }, ...this.toTags(tags)],
+    });
+
     // ========================================================================
     // Application Load Balancer
     // ========================================================================
@@ -692,6 +712,8 @@ def handler(event, context):
       targets: [
         { id: instanceA.ref, port: 80 },
         { id: instanceB.ref, port: 80 },
+        { id: instanceC.ref, port: 80 },
+        { id: instanceD.ref, port: 80 },
       ],
       tags: [{ key: 'Name', value: 'lab-dmzvpc-alb-tg' }, ...this.toTags(tags)],
     });

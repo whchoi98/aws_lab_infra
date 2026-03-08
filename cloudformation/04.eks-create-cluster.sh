@@ -120,9 +120,9 @@ ${SECRETS_BLOCK}
 managedNodeGroups:
   - name: ${PRIVATE_MGMD_NODE}
     instanceType: ${INSTANCE_TYPE}
-    desiredCapacity: 2
-    minSize: 2
-    maxSize: 4
+    desiredCapacity: 8
+    minSize: 4
+    maxSize: 12
     volumeSize: 50
     volumeType: gp3
     volumeEncrypted: true

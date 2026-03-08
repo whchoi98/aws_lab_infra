@@ -614,6 +614,94 @@ Resources:
         - Key: ManagedBy
           Value: cloudformation
 
+  EC2InstanceA2:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - SSMEndpoint
+      - SSMMessagesEndpoint
+      - EC2MessagesEndpoint
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PrivateSubnetA
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
+          AZ=$(ec2-metadata -z | cut -d' ' -f2)
+          cat > /var/www/html/index.html <<EOF
+          <h1>VPC02 - Instance A2</h1>
+          <p>Instance ID: ${!INSTANCE_ID}</p>
+          <p>AZ: ${!AZ}</p>
+          <p>Private IP: $(hostname -I)</p>
+          EOF
+      Tags:
+        - Key: Name
+          Value: lab-vpc02-private-ec2-a02
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  EC2InstanceB2:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - SSMEndpoint
+      - SSMMessagesEndpoint
+      - EC2MessagesEndpoint
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PrivateSubnetB
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
+          AZ=$(ec2-metadata -z | cut -d' ' -f2)
+          cat > /var/www/html/index.html <<EOF
+          <h1>VPC02 - Instance B2</h1>
+          <p>Instance ID: ${!INSTANCE_ID}</p>
+          <p>AZ: ${!AZ}</p>
+          <p>Private IP: $(hostname -I)</p>
+          EOF
+      Tags:
+        - Key: Name
+          Value: lab-vpc02-private-ec2-b02
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
 #========================================
 # Outputs
 #========================================
