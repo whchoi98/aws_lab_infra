@@ -45,7 +45,7 @@
 ```bash
 # ━━━ Phase 0: 도구 + VSCode ━━━
 cd cloudformation/
-source check-prerequisites.sh
+source 00.check-prerequisites.sh
 ./00.deploy-vscode-server.sh
 
 # ━━━ Phase 1: 네트워크 ━━━
@@ -67,11 +67,11 @@ source ./03.eks-setup-env.sh     # 환경변수 + KMS + EKS 버전 입력
 # ━━━ Phase 5: 앱 + 보안 ━━━
 ./09.deploy-app.sh bilingual     # 한/영 쇼핑몰 (Docker build + ECR push)
 cd ../shared/
-./deploy-cloudfront-protection.sh eksworkshop-cf lab-cf
+./03.deploy-cloudfront-protection.sh eksworkshop-cf lab-cf
 
 # ━━━ 검증 ━━━
-./cloudwatch-queries.sh pod-cpu lab-cf 60
-./cloudwatch-queries.sh db-connections lab-cf 60
+./04.cloudwatch-queries.sh pod-cpu lab-cf 60
+./04.cloudwatch-queries.sh db-connections lab-cf 60
 
 # ━━━ 정리 (필요시) ━━━
 cd ../cloudformation/
@@ -108,7 +108,7 @@ cloudformation/
 ├── 08.deploy-aurora.sh            ← Phase 4
 ├── 09.deploy-app.sh               ← Phase 5
 ├── 99.eks-cleanup.sh              ← 정리
-├── check-prerequisites.sh         ← 도구 점검
+├── 00.check-prerequisites.sh         ← 도구 점검
 └── templates/                     ← CF YAML 템플릿
     ├── vscode_server_secure.yaml
     ├── 1.DMZVPC.yaml

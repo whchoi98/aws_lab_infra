@@ -9,7 +9,7 @@ echo "  AWS CDK 전체 배포"
 echo "============================================"
 
 # 도구 점검
-source "${SHARED_DIR}/check-prerequisites.sh"
+source "${SHARED_DIR}/00.check-prerequisites.sh"
 
 # npm install
 cd "${SCRIPT_DIR}"

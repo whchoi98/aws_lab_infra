@@ -30,7 +30,7 @@
 ├─────────────────────────────────────────────────────────────────┤
 │  Phase 4: 앱 + 보안                                              │
 │  ┌────────────────────┐  ┌──────────────────────────────────┐  │
-│  │ deploy-app.sh      │→│ deploy-cloudfront-protection     │  │
+│  │ 02.deploy-app.sh      │→│ deploy-cloudfront-protection     │  │
 │  └────────────────────┘  └──────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
   ※ Phase 4에서 Data Services는 Phase 1에 포함 (별도 배포 불필요)
@@ -40,7 +40,7 @@
 
 ```bash
 # ━━━ Phase 0: 도구 + VSCode ━━━
-source ../shared/check-prerequisites.sh
+source ../shared/00.check-prerequisites.sh
 cd ../cloudformation/
 ./00.deploy-vscode-server.sh         # VSCode Server (CF 공통)
 
@@ -67,11 +67,11 @@ source ./03.eks-setup-env.sh         # DMZ VPC에서 Subnet 추출
 
 # ━━━ Phase 4: 앱 + 보안 (Data Services는 Phase 1에 포함) ━━━
 cd ../shared/
-./deploy-app.sh bilingual            # 쇼핑몰
-./deploy-cloudfront-protection.sh eksworkshop-tf lab-terraform
+./02.deploy-app.sh bilingual            # 쇼핑몰
+./03.deploy-cloudfront-protection.sh eksworkshop-tf lab-terraform
 
 # ━━━ 검증 ━━━
-./cloudwatch-queries.sh pod-cpu lab-terraform 60
+./04.cloudwatch-queries.sh pod-cpu lab-terraform 60
 cd ../terraform/ && terraform output
 
 # ━━━ 정리 (필요시) ━━━

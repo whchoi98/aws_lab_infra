@@ -25,4 +25,4 @@ if [ -z "${APP_TYPE}" ]; then
   esac
 fi
 
-exec "${SHARED_DIR}/deploy-app.sh" "${APP_TYPE}"
+exec "${SHARED_DIR}/02.deploy-app.sh" "${APP_TYPE}"

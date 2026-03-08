@@ -9,7 +9,7 @@ echo "  Terraform 전체 배포"
 echo "============================================"
 
 # 도구 점검
-source "${SHARED_DIR}/check-prerequisites.sh"
+source "${SHARED_DIR}/00.check-prerequisites.sh"
 
 read -p "AWS 리전 [ap-northeast-2]: " AWS_REGION
 AWS_REGION=${AWS_REGION:-ap-northeast-2}

@@ -79,8 +79,8 @@ done
 # 2.5. 도구 점검
 # ─────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${SCRIPT_DIR}/check-prerequisites.sh" ]; then
-  source "${SCRIPT_DIR}/check-prerequisites.sh"
+if [ -f "${SCRIPT_DIR}/00.check-prerequisites.sh" ]; then
+  source "${SCRIPT_DIR}/00.check-prerequisites.sh"
 fi
 
 # ─────────────────────────────────────────────

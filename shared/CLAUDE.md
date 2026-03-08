@@ -5,9 +5,9 @@
 ## Structure
 - `bilingual-app/` — 한/영 쇼핑몰 (Node.js Express + Kustomize)
 - `base-application/` — 원본 Retail Store Sample (영어)
-- `deploy-app.sh` — 앱 배포 (base/bilingual 선택, Docker 빌드 포함)
-- `check-prerequisites.sh` — aws, eksctl, kubectl, helm, jq, python3 점검/설치
-- `setup-test-profiles.sh` — 3계정 AWS CLI 프로파일 설정
+- `02.deploy-app.sh` — 앱 배포 (base/bilingual 선택, Docker 빌드 포함)
+- `00.check-prerequisites.sh` — aws, eksctl, kubectl, helm, jq, python3 점검/설치
+- `01.setup-test-profiles.sh` — 3계정 AWS CLI 프로파일 설정
 
 ## bilingual-app UI
 - `ui/src/server.js` — Express SSR + pino JSON logging

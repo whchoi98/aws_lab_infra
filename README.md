@@ -56,7 +56,7 @@ AWS 네트워크 + EKS 기반 마이크로서비스 랩 플랫폼.
 ### 방식 1: Shell + CloudFormation
 ```bash
 cd cloudformation/
-source check-prerequisites.sh        # 도구 점검
+source 00.check-prerequisites.sh        # 도구 점검
 ./00.deploy-vscode-server.sh         # VSCode
 ./01.deploy-all-vpcs.sh              # VPCs
 ./02.deploy-tgw.sh                   # TGW
@@ -65,7 +65,7 @@ source ./03.eks-setup-env.sh         # EKS 환경
 ./05.deploy-lbc.sh && ./06.deploy-karpenter.sh
 ./07.deploy-valkey.sh && ./08.deploy-aurora.sh
 ./09.deploy-app.sh bilingual         # 쇼핑몰
-cd ../shared/ && ./deploy-cloudfront-protection.sh eksworkshop-cf lab-cf
+cd ../shared/ && ./03.deploy-cloudfront-protection.sh eksworkshop-cf lab-cf
 ```
 
 ### 방식 2: AWS CDK
@@ -76,8 +76,8 @@ cd ../cloudformation/
 source ./03.eks-setup-env.sh && ./04.eks-create-cluster.sh
 ./05.deploy-lbc.sh && ./06.deploy-karpenter.sh
 ./07.deploy-valkey.sh && ./08.deploy-aurora.sh
-cd ../shared/ && ./deploy-app.sh bilingual
-./deploy-cloudfront-protection.sh eksworkshop-cdk lab-cdk
+cd ../shared/ && ./02.deploy-app.sh bilingual
+./03.deploy-cloudfront-protection.sh eksworkshop-cdk lab-cdk
 ```
 
 ### 방식 3: Terraform
@@ -87,8 +87,8 @@ cd ../terraform/ && ./deploy.sh      # TF 전체 배포 (Data Services 포함)
 cd ../cloudformation/
 source ./03.eks-setup-env.sh && ./04.eks-create-cluster.sh
 ./05.deploy-lbc.sh && ./06.deploy-karpenter.sh
-cd ../shared/ && ./deploy-app.sh bilingual
-./deploy-cloudfront-protection.sh eksworkshop-tf lab-terraform
+cd ../shared/ && ./02.deploy-app.sh bilingual
+./03.deploy-cloudfront-protection.sh eksworkshop-tf lab-terraform
 ```
 
 ## 계정당 리소스 (21 EC2 + 15 Pods)
@@ -106,11 +106,11 @@ cd ../shared/ && ./deploy-app.sh bilingual
 
 ```bash
 cd shared/
-./cloudwatch-queries.sh list                    # 21개 쿼리 목록
-./cloudwatch-queries.sh pod-cpu lab-cf 60       # Pod CPU
-./cloudwatch-queries.sh db-connections lab-cf 60 # Aurora DB
-./cloudwatch-queries.sh lambda-duration lab-cf 60 # Lambda
-./cloudwatch-queries.sh nfw-alerts lab-cf 60    # NFW 알림
+./04.cloudwatch-queries.sh list                    # 21개 쿼리 목록
+./04.cloudwatch-queries.sh pod-cpu lab-cf 60       # Pod CPU
+./04.cloudwatch-queries.sh db-connections lab-cf 60 # Aurora DB
+./04.cloudwatch-queries.sh lambda-duration lab-cf 60 # Lambda
+./04.cloudwatch-queries.sh nfw-alerts lab-cf 60    # NFW 알림
 ```
 
 ## 보안

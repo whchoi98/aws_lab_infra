@@ -20,9 +20,9 @@ aws_lab_infra/
 ├── shared/                    # 공유 리소스
 │   ├── bilingual-app/         # 한/영 쇼핑몰 (Node.js Express + EJS)
 │   ├── base-application/      # 원본 Retail Store (영어)
-│   ├── deploy-app.sh          # 앱 배포 (base/bilingual 선택)
-│   ├── check-prerequisites.sh # 도구 자동 점검/설치
-│   └── setup-test-profiles.sh # 3계정 AWS CLI 프로파일
+│   ├── 02.deploy-app.sh          # 앱 배포 (base/bilingual 선택)
+│   ├── 00.check-prerequisites.sh # 도구 자동 점검/설치
+│   └── 01.setup-test-profiles.sh # 3계정 AWS CLI 프로파일
 │
 ├── cloudformation/            # Shell + CloudFormation 방식
 │   ├── 00-09.*.sh             # 번호순 배포 스크립트
@@ -76,8 +76,8 @@ cd terraform/
 ### 앱 배포 (공통)
 ```bash
 cd shared/
-./deploy-app.sh base             # 영어 Retail Store
-./deploy-app.sh bilingual        # 한/영 커스텀 쇼핑몰
+./02.deploy-app.sh base             # 영어 Retail Store
+./02.deploy-app.sh bilingual        # 한/영 커스텀 쇼핑몰
 ```
 
 ### Docker (bilingual-app UI)
