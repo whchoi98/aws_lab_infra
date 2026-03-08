@@ -837,6 +837,21 @@ Resources:
       SubnetId: !Ref AttachSubnetB
       RouteTableId: !Ref AttachSubnetBRouteTable
 
+  # Attach Subnet default route to NAT GW (for TGW → Internet traffic)
+  AttachSubnetADefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AttachSubnetARouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayA
+
+  AttachSubnetBDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AttachSubnetBRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGatewayB
+
   #========================================
   # Security Groups
   #========================================
@@ -1277,3 +1292,27 @@ Outputs:
     Value: !Ref NetworkFirewall
     Export:
       Name: !Sub "${AWS::StackName}-NFW-ARN"
+
+  AttachSubnetARouteTableId:
+    Description: Attach Subnet A Route Table ID
+    Value: !Ref AttachSubnetARouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Attach-A-RT"
+
+  AttachSubnetBRouteTableId:
+    Description: Attach Subnet B Route Table ID
+    Value: !Ref AttachSubnetBRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Attach-B-RT"
+
+  NATGWSubnetARouteTableId:
+    Description: NATGW Subnet A Route Table ID
+    Value: !Ref NATGWSubnetARouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NATGW-A-RT"
+
+  NATGWSubnetBRouteTableId:
+    Description: NATGW Subnet B Route Table ID
+    Value: !Ref NATGWSubnetBRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NATGW-B-RT"

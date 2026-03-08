@@ -444,6 +444,95 @@ Resources:
       DestinationCidrBlock: "10.1.0.0/16"
       TransitGatewayId: !Ref TransitGateway
 
+  #========================================
+  # TGW Default Route (0.0.0.0/0 → DMZ VPC for internet)
+  #========================================
+  TGWDefaultRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    DependsOn: DMZVPCAttachment
+    Properties:
+      TransitGatewayRouteTableId: !GetAtt TransitGateway.Association.DefaultRouteTableId
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayAttachmentId: !Ref DMZVPCAttachment
+
+  #========================================
+  # DMZ Attach Subnet → VPC01/VPC02 via TGW (return path)
+  #========================================
+  DMZAttachToVPC01A:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Attach-A-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  DMZAttachToVPC02A:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Attach-A-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  DMZAttachToVPC01B:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Attach-B-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  DMZAttachToVPC02B:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-Attach-B-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  #========================================
+  # DMZ NATGW Subnet → VPC01/VPC02 via TGW (NAT return path)
+  #========================================
+  DMZNatgwToVPC01A:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-NATGW-A-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  DMZNatgwToVPC02A:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-NATGW-A-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  DMZNatgwToVPC01B:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-NATGW-B-RT"
+      DestinationCidrBlock: "10.1.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
+  DMZNatgwToVPC02B:
+    Type: AWS::EC2::Route
+    DependsOn: DMZVPCAttachment
+    Properties:
+      RouteTableId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-NATGW-B-RT"
+      DestinationCidrBlock: "10.2.0.0/16"
+      TransitGatewayId: !Ref TransitGateway
+
 #========================================
 # Outputs
 #========================================
