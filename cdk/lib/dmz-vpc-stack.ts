@@ -547,17 +547,8 @@ def handler(event, context):
       subnetId: this.attachSubnetB.ref,
       routeTableId: this.attachRouteTableB.ref,
     });
-    // Attach subnets route to NAT GW (for return traffic from TGW to internet)
-    new ec2.CfnRoute(this, 'AttachToNatA', {
-      routeTableId: this.attachRouteTableA.ref,
-      destinationCidrBlock: '0.0.0.0/0',
-      natGatewayId: natGwA.ref,
-    });
-    new ec2.CfnRoute(this, 'AttachToNatB', {
-      routeTableId: this.attachRouteTableB.ref,
-      destinationCidrBlock: '0.0.0.0/0',
-      natGatewayId: natGwB.ref,
-    });
+    // Note: Attach subnet default route (0.0.0.0/0 → NAT GW) is managed
+    // by TGW stack to avoid AlreadyExists errors on re-deploy
 
     // ========================================================================
     // SSM VPC Endpoints

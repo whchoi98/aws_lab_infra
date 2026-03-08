@@ -837,20 +837,8 @@ Resources:
       SubnetId: !Ref AttachSubnetB
       RouteTableId: !Ref AttachSubnetBRouteTable
 
-  # Attach Subnet default route to NAT GW (for TGW → Internet traffic)
-  AttachSubnetADefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref AttachSubnetARouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGatewayA
-
-  AttachSubnetBDefaultRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref AttachSubnetBRouteTable
-      DestinationCidrBlock: "0.0.0.0/0"
-      NatGatewayId: !Ref NatGatewayB
+  # Note: Attach Subnet default route (0.0.0.0/0 → NAT GW) is managed
+  # by TGW stack or manual setup, not here (to avoid AlreadyExists errors)
 
   #========================================
   # Security Groups
