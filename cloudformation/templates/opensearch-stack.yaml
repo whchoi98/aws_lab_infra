@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon OpenSearch Service domain in DMZ VPC Data Subnets
+
+Parameters:
+  DMZVPCStackName:
+    Type: String
+    Default: DMZVPC
+  DomainName:
+    Type: String
+    Default: lab-opensearch
+  InstanceType:
+    Type: String
+    Default: r7g.large.search
+    Description: "OpenSearch instance type (Graviton preferred)"
+    AllowedValues:
+      - t3.medium.search
+      - r7g.large.search
+      - r7g.xlarge.search
+      - r6g.large.search
+      - r6g.xlarge.search
+  InstanceCount:
+    Type: Number
+    Default: 2
+  VolumeSize:
+    Type: Number
+    Default: 100
+    Description: "EBS volume size per node (GB)"
+  MasterUserName:
+    Type: String
+    Default: admin
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: "Master password (min 8 chars, upper+lower+number+special)"
+
+Resources:
+  OpenSearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: OpenSearch domain SG
+      GroupName: !Sub "${AWS::StackName}-SG"
+      VpcId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp:
+            Fn::ImportValue: !Sub "${DMZVPCStackName}-CIDR"
+          Description: HTTPS from DMZ VPC
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "10.1.0.0/16"
+          Description: HTTPS from VPC01
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "10.2.0.0/16"
+          Description: HTTPS from VPC02
+      Tags:
+        - Key: Name
+          Value: lab-opensearch-sg
+        - Key: Environment
+          Value: lab
+
+  OpenSearchServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: es.amazonaws.com
+      Description: "Role for OpenSearch to access VPC resources"
+
+  OpenSearchDomain:
+    Type: AWS::OpenSearchService::Domain
+    DependsOn: OpenSearchServiceLinkedRole
+    Properties:
+      DomainName: !Ref DomainName
+      EngineVersion: "OpenSearch_2.17"
+      ClusterConfig:
+        InstanceType: !Ref InstanceType
+        InstanceCount: !Ref InstanceCount
+        DedicatedMasterEnabled: false
+        ZoneAwarenessEnabled: true
+        ZoneAwarenessConfig:
+          AvailabilityZoneCount: 2
+      EBSOptions:
+        EBSEnabled: true
+        VolumeType: gp3
+        VolumeSize: !Ref VolumeSize
+      VPCOptions:
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-Subnet-A"
+          - Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-Subnet-B"
+        SecurityGroupIds:
+          - !Ref OpenSearchSecurityGroup
+      EncryptionAtRestOptions:
+        Enabled: true
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      DomainEndpointOptions:
+        EnforceHTTPS: true
+        TLSSecurityPolicy: "Policy-Min-TLS-1-2-PFS-2023-10"
+      AdvancedSecurityOptions:
+        Enabled: true
+        InternalUserDatabaseEnabled: true
+        MasterUserOptions:
+          MasterUserName: !Ref MasterUserName
+          MasterUserPassword: !Ref MasterUserPassword
+      AccessPolicies:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "es:*"
+            Resource: !Sub "arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DomainName}/*"
+      Tags:
+        - Key: Name
+          Value: lab-opensearch
+        - Key: Environment
+          Value: lab
+
+Outputs:
+  DomainEndpoint:
+    Description: OpenSearch domain endpoint
+    Value: !GetAtt OpenSearchDomain.DomainEndpoint
+    Export:
+      Name: !Sub "${AWS::StackName}-Endpoint"
+
+  DashboardsURL:
+    Description: OpenSearch Dashboards URL
+    Value: !Sub "https://${OpenSearchDomain.DomainEndpoint}/_dashboards"
+    Export:
+      Name: !Sub "${AWS::StackName}-Dashboards"
+
+  SecurityGroupId:
+    Description: OpenSearch SG ID
+    Value: !Ref OpenSearchSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-SG-ID"
