@@ -249,19 +249,19 @@ resource "aws_security_group" "ec2" {
   vpc_id      = aws_vpc.this.id
 
   ingress {
-    description = "HTTP from VPC"
+    description = "HTTP from all VPCs"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = ["10.0.0.0/8"]
   }
 
   ingress {
-    description = "HTTPS from VPC"
+    description = "HTTPS from all VPCs"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = ["10.0.0.0/8"]
   }
 
   ingress {
@@ -312,11 +312,21 @@ resource "aws_instance" "private" {
 
   user_data = base64encode(<<-EOF
     #!/bin/bash
+    # SSM Agent install (if not present)
+    if ! systemctl list-unit-files | grep -q amazon-ssm-agent; then
+      dnf install -y amazon-ssm-agent
+    fi
+    systemctl enable amazon-ssm-agent
+    systemctl start amazon-ssm-agent
+    # httpd install
     dnf install -y httpd
     systemctl enable httpd
     systemctl start httpd
     INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2)
-    echo "<h1>${var.vpc_name} - Instance $INSTANCE_ID</h1><p>AZ: ${var.azs[count.index]}</p>" > /var/www/html/index.html
+    AZ=$(ec2-metadata -z | cut -d' ' -f2)
+    echo "<h1>${var.vpc_name} - Instance $INSTANCE_ID</h1><p>AZ: $AZ</p><p>IP: $(hostname -I)</p>" > /var/www/html/index.html
+    # SSM Agent restart after httpd install
+    systemctl restart amazon-ssm-agent
   EOF
   )
 
