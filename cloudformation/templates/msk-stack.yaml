@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon MSK (Managed Streaming for Apache Kafka) in DMZ VPC Data Subnets
+
+Parameters:
+  DMZVPCStackName:
+    Type: String
+    Default: DMZVPC
+  ClusterName:
+    Type: String
+    Default: lab-msk
+  KafkaVersion:
+    Type: String
+    Default: "3.7.x.kraft"
+    AllowedValues:
+      - "3.7.x.kraft"
+      - "3.6.0"
+      - "3.5.1"
+  InstanceType:
+    Type: String
+    Default: kafka.m7g.large
+    Description: "MSK broker instance type (Graviton preferred)"
+    AllowedValues:
+      - kafka.t3.small
+      - kafka.m7g.large
+      - kafka.m7g.xlarge
+      - kafka.m6g.large
+      - kafka.m6g.xlarge
+  BrokerCount:
+    Type: Number
+    Default: 2
+    AllowedValues: [2, 3, 4, 6]
+  VolumeSize:
+    Type: Number
+    Default: 100
+    Description: "EBS volume size per broker (GB)"
+
+Resources:
+  MSKSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: MSK cluster SG
+      GroupName: !Sub "${AWS::StackName}-SG"
+      VpcId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 9092
+          ToPort: 9092
+          CidrIp:
+            Fn::ImportValue: !Sub "${DMZVPCStackName}-CIDR"
+          Description: Plaintext from DMZ VPC
+        - IpProtocol: tcp
+          FromPort: 9094
+          ToPort: 9094
+          CidrIp:
+            Fn::ImportValue: !Sub "${DMZVPCStackName}-CIDR"
+          Description: TLS from DMZ VPC
+        - IpProtocol: tcp
+          FromPort: 9096
+          ToPort: 9096
+          CidrIp:
+            Fn::ImportValue: !Sub "${DMZVPCStackName}-CIDR"
+          Description: SASL/SCRAM from DMZ VPC
+        - IpProtocol: tcp
+          FromPort: 9092
+          ToPort: 9096
+          CidrIp: "10.1.0.0/16"
+          Description: Kafka from VPC01
+        - IpProtocol: tcp
+          FromPort: 9092
+          ToPort: 9096
+          CidrIp: "10.2.0.0/16"
+          Description: Kafka from VPC02
+        - IpProtocol: tcp
+          FromPort: 2181
+          ToPort: 2181
+          CidrIp:
+            Fn::ImportValue: !Sub "${DMZVPCStackName}-CIDR"
+          Description: ZooKeeper from DMZ VPC
+      Tags:
+        - Key: Name
+          Value: lab-msk-sg
+        - Key: Environment
+          Value: lab
+
+  MSKConfiguration:
+    Type: AWS::MSK::Configuration
+    Properties:
+      Name: !Sub "${ClusterName}-config"
+      KafkaVersionsList:
+        - !Ref KafkaVersion
+      ServerProperties: |
+        auto.create.topics.enable=true
+        default.replication.factor=2
+        min.insync.replicas=1
+        num.io.threads=8
+        num.network.threads=5
+        num.partitions=6
+        num.replica.fetchers=2
+        socket.request.max.bytes=104857600
+        unclean.leader.election.enable=false
+        log.retention.hours=168
+
+  MSKCluster:
+    Type: AWS::MSK::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName
+      KafkaVersion: !Ref KafkaVersion
+      NumberOfBrokerNodes: !Ref BrokerCount
+      ConfigurationInfo:
+        Arn: !GetAtt MSKConfiguration.Arn
+        Revision: 1
+      BrokerNodeGroupInfo:
+        InstanceType: !Ref InstanceType
+        ClientSubnets:
+          - Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-Subnet-A"
+          - Fn::ImportValue: !Sub "${DMZVPCStackName}-Data-Subnet-B"
+        SecurityGroups:
+          - !Ref MSKSecurityGroup
+        StorageInfo:
+          EBSStorageInfo:
+            VolumeSize: !Ref VolumeSize
+      EncryptionInfo:
+        EncryptionInTransit:
+          ClientBroker: TLS_PLAINTEXT
+          InCluster: true
+        EncryptionAtRest:
+          DataVolumeKMSKeyId: alias/aws/kafka
+      ClientAuthentication:
+        Unauthenticated:
+          Enabled: true
+      LoggingInfo:
+        BrokerLogs:
+          CloudWatchLogs:
+            Enabled: true
+            LogGroup: !Ref MSKLogGroup
+      Tags:
+        Name: lab-msk
+        Environment: lab
+        Project: aws-lab-infra
+
+  MSKLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/msk/${ClusterName}"
+      RetentionInDays: 30
+
+Outputs:
+  ClusterArn:
+    Description: MSK Cluster ARN
+    Value: !Ref MSKCluster
+    Export:
+      Name: !Sub "${AWS::StackName}-ClusterArn"
+
+  SecurityGroupId:
+    Description: MSK Security Group ID
+    Value: !Ref MSKSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-SG-ID"
+
+  BootstrapBrokers:
+    Description: Bootstrap brokers (use aws kafka get-bootstrap-brokers)
+    Value: !Sub "aws kafka get-bootstrap-brokers --cluster-arn ${MSKCluster} --region ${AWS::Region}"
