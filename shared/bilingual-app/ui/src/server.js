@@ -218,7 +218,7 @@ app.post('/checkout/place-order', async (req, res) => {
   logger.info({ action: 'checkout_update', email, subtotal, requestId: req.id }, 'order_action');
 
   // Step 2: Create order directly via orders service (bypass checkout submit)
-  let cartItems = [];
+  // Re-fetch cart items (cartItems already declared above)
   try {
     cartItems = await callBackend(`${CARTS_URL}/carts/1/items`, req.id) || [];
   } catch (e) { /* empty */ }
