@@ -25,11 +25,17 @@ export class TgwStack extends cdk.Stack {
     // ========================================================================
     this.transitGateway = new ec2.CfnTransitGateway(this, 'Tgw', {
       description: 'Transit Gateway for lab infrastructure',
-      defaultRouteTableAssociation: 'enable',
-      defaultRouteTablePropagation: 'enable',
+      defaultRouteTableAssociation: 'disable',
+      defaultRouteTablePropagation: 'disable',
       dnsSupport: 'enable',
       vpnEcmpSupport: 'enable',
       tags: [{ key: 'Name', value: 'lab-tgw' }, ...this.toTags(tags)],
+    });
+
+    // Explicit TGW Route Table (CF doesn't support GetAtt on default RT)
+    const tgwRouteTable = new ec2.CfnTransitGatewayRouteTable(this, 'TgwRouteTable', {
+      transitGatewayId: this.transitGateway.ref,
+      tags: [{ key: 'Name', value: 'lab-tgw-rt' }, ...this.toTags(tags)],
     });
 
     // ========================================================================
@@ -63,6 +69,35 @@ export class TgwStack extends cdk.Stack {
         props.vpc02Stack.attachSubnetB.ref,
       ],
       tags: [{ key: 'Name', value: 'lab-tgw-vpc02-attach' }, ...this.toTags(tags)],
+    });
+
+    // ========================================================================
+    // TGW Route Table Associations & Propagations
+    // ========================================================================
+    const dmzAssoc = new ec2.CfnTransitGatewayRouteTableAssociation(this, 'TgwDmzAssoc', {
+      transitGatewayAttachmentId: dmzAttachment.ref,
+      transitGatewayRouteTableId: tgwRouteTable.ref,
+    });
+    const vpc01Assoc = new ec2.CfnTransitGatewayRouteTableAssociation(this, 'TgwVpc01Assoc', {
+      transitGatewayAttachmentId: vpc01Attachment.ref,
+      transitGatewayRouteTableId: tgwRouteTable.ref,
+    });
+    const vpc02Assoc = new ec2.CfnTransitGatewayRouteTableAssociation(this, 'TgwVpc02Assoc', {
+      transitGatewayAttachmentId: vpc02Attachment.ref,
+      transitGatewayRouteTableId: tgwRouteTable.ref,
+    });
+
+    new ec2.CfnTransitGatewayRouteTablePropagation(this, 'TgwDmzProp', {
+      transitGatewayAttachmentId: dmzAttachment.ref,
+      transitGatewayRouteTableId: tgwRouteTable.ref,
+    });
+    new ec2.CfnTransitGatewayRouteTablePropagation(this, 'TgwVpc01Prop', {
+      transitGatewayAttachmentId: vpc01Attachment.ref,
+      transitGatewayRouteTableId: tgwRouteTable.ref,
+    });
+    new ec2.CfnTransitGatewayRouteTablePropagation(this, 'TgwVpc02Prop', {
+      transitGatewayAttachmentId: vpc02Attachment.ref,
+      transitGatewayRouteTableId: tgwRouteTable.ref,
     });
 
     // ========================================================================
@@ -174,13 +209,14 @@ export class TgwStack extends cdk.Stack {
     // ========================================================================
     // TGW Default Route: 0.0.0.0/0 → DMZ VPC attachment
     // ========================================================================
-    // Since defaultRouteTableAssociation is enabled, we use the TGW's
-    // association default route table. We retrieve it via Fn.getAtt.
-    const tgwDefaultRouteTable = new ec2.CfnTransitGatewayRoute(this, 'TgwDefaultRoute', {
-      transitGatewayRouteTableId: cdk.Fn.getAtt(this.transitGateway.logicalId, 'AssociationDefaultRouteTableId').toString(),
+    const tgwDefaultRouteRes = new ec2.CfnTransitGatewayRoute(this, 'TgwDefaultRoute', {
+      transitGatewayRouteTableId: tgwRouteTable.ref,
       destinationCidrBlock: '0.0.0.0/0',
       transitGatewayAttachmentId: dmzAttachment.ref,
     });
+    tgwDefaultRouteRes.addDependency(dmzAssoc);
+    tgwDefaultRouteRes.addDependency(vpc01Assoc);
+    tgwDefaultRouteRes.addDependency(vpc02Assoc);
 
     // ========================================================================
     // VPC01 Routes: 0.0.0.0/0 + VPC02 CIDR via TGW

@@ -38,13 +38,30 @@ Resources:
     Properties:
       AmazonSideAsn: 65000
       AutoAcceptSharedAttachments: enable
-      DefaultRouteTableAssociation: enable
-      DefaultRouteTablePropagation: enable
+      DefaultRouteTableAssociation: disable
+      DefaultRouteTablePropagation: disable
       DnsSupport: enable
       VpnEcmpSupport: enable
       Tags:
         - Key: Name
           Value: lab-tgw
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  #========================================
+  # TGW Route Table (explicit, replaces default)
+  #========================================
+  TGWRouteTable:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties:
+      TransitGatewayId: !Ref TransitGateway
+      Tags:
+        - Key: Name
+          Value: lab-tgw-rt
         - Key: Environment
           Value: lab
         - Key: Project
@@ -111,6 +128,48 @@ Resources:
           Value: aws-lab-infra
         - Key: ManagedBy
           Value: cloudformation
+
+  #========================================
+  # TGW Route Table Associations
+  #========================================
+  DMZVPCAssociation:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref DMZVPCAttachment
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
+
+  VPC01Association:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref VPC01Attachment
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
+
+  VPC02Association:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref VPC02Attachment
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
+
+  #========================================
+  # TGW Route Table Propagations
+  #========================================
+  DMZVPCPropagation:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref DMZVPCAttachment
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
+
+  VPC01Propagation:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref VPC01Attachment
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
+
+  VPC02Propagation:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref VPC02Attachment
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
 
   #========================================
   # DMZ VPC Routes (Private and Data -> TGW)
@@ -449,9 +508,12 @@ Resources:
   #========================================
   TGWDefaultRoute:
     Type: AWS::EC2::TransitGatewayRoute
-    DependsOn: DMZVPCAttachment
+    DependsOn:
+      - DMZVPCAssociation
+      - VPC01Association
+      - VPC02Association
     Properties:
-      TransitGatewayRouteTableId: !GetAtt TransitGateway.Association.DefaultRouteTableId
+      TransitGatewayRouteTableId: !Ref TGWRouteTable
       DestinationCidrBlock: "0.0.0.0/0"
       TransitGatewayAttachmentId: !Ref DMZVPCAttachment
 
@@ -542,6 +604,12 @@ Outputs:
     Value: !Ref TransitGateway
     Export:
       Name: !Sub "${AWS::StackName}-TGW-ID"
+
+  TGWRouteTableId:
+    Description: TGW Route Table ID
+    Value: !Ref TGWRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TGW-RT-ID"
 
   DMZVPCAttachmentId:
     Description: DMZ VPC TGW Attachment ID
