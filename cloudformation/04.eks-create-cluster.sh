@@ -185,8 +185,6 @@ addons:
   # Observability
   - name: amazon-cloudwatch-observability
     version: latest
-  - name: adot
-    version: latest
   - name: eks-node-monitoring-agent
     version: latest
   - name: aws-network-flow-monitoring-agent
@@ -241,6 +239,21 @@ eksctl create cluster --config-file="${CLUSTER_CONFIG}"
 echo ""
 echo "  ✅ 클러스터 생성 완료!"
 echo "  완료 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+
+# ─────────────────────────────────────────────
+# 4.5. ADOT 애드온 설치 (Marketplace 약관 동의 필요)
+# ─────────────────────────────────────────────
+echo ""
+echo "▶ [4.5/5] ADOT 애드온 설치..."
+echo "  ADOT는 AWS Marketplace 약관 동의가 필요합니다."
+
+# ADOT 약관 동의 (이미 동의한 경우 무시)
+aws eks create-addon --cluster-name "${EKSCLUSTER_NAME}" \
+  --addon-name adot --resolve-conflicts OVERWRITE \
+  --region "${AWS_REGION}" 2>&1 && \
+  echo "  ✅ ADOT 애드온 설치 요청 완료" || \
+  echo "  ⚠️  ADOT 설치 실패 — EKS 콘솔에서 ADOT Marketplace 약관에 동의 후 수동 설치하세요:"
+echo "     aws eks create-addon --cluster-name ${EKSCLUSTER_NAME} --addon-name adot --region ${AWS_REGION}"
 
 # ─────────────────────────────────────────────
 # 5. 클러스터 상태 확인
