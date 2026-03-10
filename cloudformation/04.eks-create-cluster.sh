@@ -11,7 +11,7 @@ set -e
 #   4. kubeconfig 업데이트
 #   5. 클러스터 상태 확인
 
-source ~/.bash_profile
+set +eu; source ~/.bash_profile; set -e
 
 # ─────────────────────────────────────────────
 # 환경변수 검증

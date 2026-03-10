@@ -140,7 +140,9 @@ append_to_bash_profile "INSTANCE_TYPE" "$INSTANCE_TYPE"
 append_to_bash_profile "PRIVATE_MGMD_NODE" "$PRIVATE_MGMD_NODE"
 append_to_bash_profile "MASTER_ARN" "$MASTER_ARN"
 
+set +eu
 source ~/.bash_profile
+set -e
 
 echo ""
 echo "============================================"
