@@ -25,9 +25,9 @@ aws_lab_infra/
 │   └── 01.setup-test-profiles.sh # 3계정 AWS CLI 프로파일
 │
 ├── cloudformation/            # Shell + CloudFormation 방식
-│   ├── 00-09.*.sh             # 번호순 배포 스크립트
+│   ├── 00-15.*.sh             # 번호순 배포 스크립트 (18개)
 │   ├── 99.eks-cleanup.sh      # 정리
-│   └── templates/             # CF YAML 템플릿 (7개)
+│   └── templates/             # CF YAML 템플릿 (9개)
 │
 ├── cdk/                       # AWS CDK TypeScript
 │   ├── deploy.sh              # 전체 배포 래퍼
@@ -45,19 +45,26 @@ aws_lab_infra/
 
 ## Key Commands
 
-### CloudFormation 배포 (번호순)
+### CloudFormation 배포 (번호순, 18개 스크립트)
 ```bash
 cd cloudformation/
-./00.deploy-vscode-server.sh     # VSCode Server
+./00.check-prerequisites.sh      # 도구 자동 점검/설치
+./00.deploy-vscode-server.sh     # VSCode Server (m7g.xlarge)
 ./01.deploy-all-vpcs.sh          # 3 VPCs (병렬)
 ./02.deploy-tgw.sh               # Transit Gateway
 source ./03.eks-setup-env.sh     # EKS 환경변수
 ./04.eks-create-cluster.sh       # eksctl 클러스터
 ./05.deploy-lbc.sh               # LBC (Pod Identity)
 ./06.deploy-karpenter.sh         # Karpenter v1.9.0
-./07.deploy-valkey.sh            # Valkey (ElastiCache)
-./08.deploy-aurora.sh            # Aurora MySQL
+./07.deploy-valkey.sh            # Valkey (cache.r7g.large x2)
+./08.deploy-aurora.sh            # Aurora MySQL (db.r7g.large x2, PI + Enhanced Monitoring)
 ./09.deploy-app.sh [base|bilingual]  # 앱 배포
+./10.deploy-opensearch.sh        # OpenSearch (r7g.large.search x2)
+./11.create-s3-buckets.sh        # S3 20 buckets (encrypted, versioned)
+./12.create-dynamodb-tables.sh   # DynamoDB 20 tables (on-demand, PITR)
+./13.create-lambda-functions.sh  # Lambda 20 functions (arm64, X-Ray)
+./14.deploy-msk.sh               # MSK (kafka.m7g.large x2)
+./15.enable-detailed-monitoring.sh  # EC2 Detailed Monitoring (1-min)
 ./99.eks-cleanup.sh              # 정리
 ```
 
@@ -73,11 +80,11 @@ cd terraform/
 ./deploy.sh                      # 전체 배포 (init → plan → apply)
 ```
 
-### 앱 배포 (공통)
+### 앱 배포 (공통, auto CloudFront protection 포함)
 ```bash
 cd shared/
-./02.deploy-app.sh base             # 영어 Retail Store
-./02.deploy-app.sh bilingual        # 한/영 커스텀 쇼핑몰
+./02.deploy-app.sh base             # 영어 Retail Store + CloudFront 보호 자동 적용
+./02.deploy-app.sh bilingual        # 한/영 커스텀 쇼핑몰 + CloudFront 보호 자동 적용
 ```
 
 ### Docker (bilingual-app UI)
@@ -104,8 +111,10 @@ docker build -t lab-shop-ui:latest .
 - VPC EC2: `t4g.large`
 - EKS 노드 (MNG): `t4g.2xlarge`
 - EKS 노드 (Karpenter): `t4g.* / m7g.*` (arm64)
-- Aurora: `db.r7g.large`
-- Valkey: `cache.r7g.large`
+- Aurora: `db.r7g.large` x2 (PI + Enhanced Monitoring)
+- Valkey: `cache.r7g.large` x2
+- OpenSearch: `r7g.large.search` x2
+- MSK: `kafka.m7g.large` x2
 
 ### Network CIDR
 | VPC | CIDR | 용도 |
@@ -146,6 +155,31 @@ docker build -t lab-shop-ui:latest .
 | Observability | metrics-server | latest |
 | Security | aws-guardduty-agent | v1.12.1 |
 | Security | eks-pod-identity-agent | latest |
+
+### Data Services
+| Service | Spec | Count | Features |
+|---------|------|-------|----------|
+| Aurora MySQL | db.r7g.large | 2 nodes | Performance Insights (7d), Enhanced Monitoring (60s) |
+| Valkey | cache.r7g.large | 2 nodes | Encrypted at rest + in transit |
+| OpenSearch | r7g.large.search | 2 nodes | Encrypted, Data Subnet |
+| MSK | kafka.m7g.large | 2 brokers | CloudWatch Broker Logs |
+
+### Serverless Resources
+| Service | Count | Config |
+|---------|-------|--------|
+| S3 | 20 buckets | KMS encrypted, public access blocked, versioned |
+| DynamoDB | 20 tables | On-demand, PITR, deletion protection |
+| Lambda | 20 functions | arm64, X-Ray tracing, python/node rotating |
+
+### Monitoring
+- EC2: Detailed Monitoring (1-min interval on all instances)
+- EKS: Container Insights + 15 addons
+- Aurora: Performance Insights (7d) + Enhanced Monitoring (60s)
+- Lambda: X-Ray + Insights Layer
+- MSK: CloudWatch Broker Logs
+- NFW: Alert + Flow Logs
+- App: pino JSON logging + X-Request-ID
+- CloudWatch: 13+ log groups, 21 Insights queries (app 7, EKS 6, DB 3, Lambda 3, infra 2)
 
 ## Auto-Sync Rules
 
