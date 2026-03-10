@@ -23,6 +23,9 @@ if [ ${#OS_PASS} -lt 8 ]; then
   exit 1
 fi
 
+# OpenSearch VPC 배포에 필요한 Service-Linked Role 자동 생성
+aws iam create-service-linked-role --aws-service-name es.amazonaws.com 2>/dev/null || true
+
 echo ""
 aws cloudformation deploy \
   --stack-name OpenSearch \
