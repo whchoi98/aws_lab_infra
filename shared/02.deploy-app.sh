@@ -79,6 +79,8 @@ if [ "${APP_TYPE}" = "bilingual" ] && [ -f "${APP_DIR}/ui/Dockerfile" ]; then
   sed -i "s|ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/lab-shop-ui:latest|${ECR_URI}:latest|g" ${TMPDIR}/ui/deployment.yaml
   kubectl apply -k ${TMPDIR}/ ${CTX_OPT} 2>&1
   rm -rf ${TMPDIR}
+  # Force pull new image (tag is always :latest)
+  kubectl rollout restart deployment/ui -n ui ${CTX_OPT} 2>/dev/null || true
 else
   echo "▶ [1/5] Kustomize 배포"
   kubectl apply -k ${APP_DIR}/ ${CTX_OPT} 2>&1
