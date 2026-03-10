@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 # Karpenter v1 설치 및 구성 스크립트
 # EKS 클러스터에 Karpenter를 배포하고 NodePool + EC2NodeClass를 생성합니다.
@@ -12,7 +12,7 @@ set -euo pipefail
 #
 # 사용법: ./deploy-karpenter.sh
 
-source ~/.bash_profile 2>/dev/null || true
+set +eu; source ~/.bash_profile; set -eo pipefail
 
 CLUSTER_NAME="${EKSCLUSTER_NAME:-eksworkshop}"
 REGION="${AWS_REGION:-ap-northeast-2}"

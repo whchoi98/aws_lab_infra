@@ -1,8 +1,8 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 # AWS Load Balancer Controller를 EKS 클러스터에 배포합니다.
-# eksctl IRSA + Helm 차트 기반 설치.
+# Pod Identity + Helm 차트 기반 설치.
 #
 # 사전 요구사항:
 #   - EKS 클러스터가 ACTIVE 상태
@@ -11,7 +11,7 @@ set -euo pipefail
 #
 # 사용법: ./deploy-lbc.sh
 
-source ~/.bash_profile 2>/dev/null || true
+set +eu; source ~/.bash_profile; set -eo pipefail
 
 CLUSTER_NAME="${EKSCLUSTER_NAME:-eksworkshop}"
 REGION="${AWS_REGION:-ap-northeast-2}"
