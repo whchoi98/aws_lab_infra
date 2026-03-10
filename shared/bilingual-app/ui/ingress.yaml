@@ -9,8 +9,11 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/healthcheck-path: /health
-    alb.ingress.kubernetes.io/tags: Environment=lab,Project=aws-lab-infra,ManagedBy=lbc
+    alb.ingress.kubernetes.io/tags: Environment=lab,Project=aws-lab-infra,ManagedBy=lbc,CloudFrontProtected=true
     alb.ingress.kubernetes.io/manage-backend-security-group-rules: "true"
+    # ALB SG: CloudFront Prefix List만 허용 (0.0.0.0/0 차단)
+    # LBC가 생성하는 SG에 대해 deploy 후 자동으로 Prefix List 적용
+    alb.ingress.kubernetes.io/load-balancer-attributes: "idle_timeout.timeout_seconds=60"
 spec:
   ingressClassName: alb
   rules:
