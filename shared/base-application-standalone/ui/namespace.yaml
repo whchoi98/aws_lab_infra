@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ui-base
+  labels:
+    app.kubernetes.io/created-by: eks-workshop
+    app-type: base-application

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui-base
+  namespace: ui-base
+  labels:
+    app.kubernetes.io/name: ui-base
+    app.kubernetes.io/instance: ui-base
+    app.kubernetes.io/component: service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: ui-base
+    app.kubernetes.io/instance: ui-base
+    app.kubernetes.io/component: service
