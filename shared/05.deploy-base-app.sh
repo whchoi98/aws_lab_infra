@@ -105,7 +105,24 @@ if [ "${STACK_STATUS}" = "NOT_FOUND" ] || [[ "${STACK_STATUS}" == *"ROLLBACK"* ]
     --region "${REGION}" ${PROFILE_OPT} 2>&1 | tail -3
   echo "  ✅ CloudFront 생성 완료"
 else
-  echo "  ✅ CloudFront 이미 존재 (변경 없음)"
+  # ALB DNS가 변경되었으면 업데이트
+  CURRENT_ALB=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} \
+    --query "Stacks[0].Parameters[?ParameterKey=='ALBDnsName'].ParameterValue|[0]" \
+    --output text --region "${REGION}" ${PROFILE_OPT} 2>/dev/null)
+
+  if [ "${CURRENT_ALB}" != "${ALB}" ]; then
+    aws cloudformation deploy \
+      --stack-name ${STACK_NAME} \
+      --template-file "${SCRIPT_DIR}/cloudfront-alb-protection.yaml" \
+      --parameter-overrides \
+        ALBDnsName="${ALB}" \
+        ALBSecurityGroupId="${ALB_SG}" \
+        CloudFrontPrefixListId="${CF_PREFIX_LIST_ID}" \
+      --region "${REGION}" ${PROFILE_OPT} 2>&1 | tail -3
+    echo "  ✅ CloudFront 업데이트 (ALB 변경 감지)"
+  else
+    echo "  ✅ CloudFront 이미 존재 (변경 없음)"
+  fi
 fi
 
 CF_URL=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME} \
