@@ -452,7 +452,7 @@ Resources:
             - Name: RETAIL_CATALOG_PERSISTENCE_PROVIDER
               Value: mysql
             - Name: RETAIL_CATALOG_PERSISTENCE_ENDPOINT
-              Value: "localhost:3306"
+              Value: "mysql:3306"
             - Name: RETAIL_CATALOG_PERSISTENCE_DB_NAME
               Value: catalog
             - Name: RETAIL_CATALOG_PERSISTENCE_USER
@@ -525,7 +525,7 @@ Resources:
             - Name: AWS_SECRET_ACCESS_KEY
               Value: secret
             - Name: RETAIL_CART_PERSISTENCE_DYNAMODB_ENDPOINT
-              Value: "http://localhost:8000"
+              Value: "http://dynamodb-local:8000"
           Links:
             - dynamodb-local
           DependsOn:
@@ -569,7 +569,7 @@ Resources:
             - Name: RETAIL_CHECKOUT_PERSISTENCE_PROVIDER
               Value: redis
             - Name: RETAIL_CHECKOUT_PERSISTENCE_REDIS_URL
-              Value: "redis://localhost:6379"
+              Value: "redis://redis:6379"
             - Name: RETAIL_CHECKOUT_ENDPOINTS_ORDERS
               Value: http://orders.lab-shop.local:8080
           Links:
@@ -615,7 +615,7 @@ Resources:
             - Name: RETAIL_ORDERS_PERSISTENCE_PROVIDER
               Value: postgres
             - Name: RETAIL_ORDERS_PERSISTENCE_ENDPOINT
-              Value: "localhost:5432"
+              Value: "postgresql:5432"
             - Name: RETAIL_ORDERS_PERSISTENCE_NAME
               Value: orders
             - Name: RETAIL_ORDERS_PERSISTENCE_USERNAME
@@ -626,7 +626,7 @@ Resources:
             - postgresql
           DependsOn:
             - ContainerName: postgresql
-              Condition: START
+              Condition: HEALTHY
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -645,6 +645,12 @@ Resources:
               Value: orders
             - Name: POSTGRES_PASSWORD
               Value: 3z6sGLhGunfn0xZc
+          HealthCheck:
+            Command: ["CMD-SHELL", "pg_isready -U orders || exit 1"]
+            Interval: 10
+            Timeout: 5
+            Retries: 10
+            StartPeriod: 30
           LogConfiguration:
             LogDriver: awslogs
             Options:
