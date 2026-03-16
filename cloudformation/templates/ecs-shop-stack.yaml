@@ -284,8 +284,8 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Family: lab-shop-fg-catalog
-      Cpu: "512"
-      Memory: "1024"
+      Cpu: "1024"
+      Memory: "2048"
       NetworkMode: awsvpc
       RequiresCompatibilities: [FARGATE]
       RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
@@ -302,7 +302,7 @@ Resources:
             - {Name: RETAIL_CATALOG_PERSISTENCE_DB_NAME, Value: catalog}
             - {Name: RETAIL_CATALOG_PERSISTENCE_USER, Value: catalog}
             - {Name: RETAIL_CATALOG_PERSISTENCE_PASSWORD, Value: dYmNfWV4uEvTzoFu}
-          DependsOn: [{ContainerName: mysql, Condition: START}]
+          DependsOn: [{ContainerName: mysql, Condition: HEALTHY}]
           LogConfiguration:
             LogDriver: awslogs
             Options: {awslogs-group: !Ref CatalogLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: catalog}
@@ -314,6 +314,12 @@ Resources:
             - {Name: MYSQL_DATABASE, Value: catalog}
             - {Name: MYSQL_USER, Value: catalog}
             - {Name: MYSQL_PASSWORD, Value: dYmNfWV4uEvTzoFu}
+          HealthCheck:
+            Command: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pdYmNfWV4uEvTzoFu || exit 1"]
+            Interval: 10
+            Timeout: 5
+            Retries: 10
+            StartPeriod: 60
           LogConfiguration:
             LogDriver: awslogs
             Options: {awslogs-group: !Ref CatalogLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: mysql}

@@ -463,7 +463,7 @@ Resources:
             - mysql
           DependsOn:
             - ContainerName: mysql
-              Condition: START
+              Condition: HEALTHY
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -484,6 +484,12 @@ Resources:
               Value: catalog
             - Name: MYSQL_PASSWORD
               Value: dYmNfWV4uEvTzoFu
+          HealthCheck:
+            Command: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -pdYmNfWV4uEvTzoFu || exit 1"]
+            Interval: 10
+            Timeout: 5
+            Retries: 10
+            StartPeriod: 60
           LogConfiguration:
             LogDriver: awslogs
             Options:
