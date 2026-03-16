@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  ECS Fargate (Graviton ARM64) Retail Store Sample App on DMZ VPC.
-  UI exposed via ALB + CloudFront, backend via Cloud Map service discovery.
+  ECS Fargate (Graviton ARM64) Shop App on DMZ VPC.
+  Supports bilingual (custom ECR) or base (public ECR) UI.
+  ALB + CloudFront, backend via Cloud Map service discovery.
 
 Parameters:
   DMZVPCStackName:
@@ -10,12 +11,13 @@ Parameters:
 
   AppImage:
     Type: String
-    Default: base
+    Default: bilingual
     AllowedValues: [base, bilingual]
 
   BillingualEcrUri:
     Type: String
     Default: ""
+    Description: "Required when AppImage=bilingual (e.g. 123456789.dkr.ecr.region.amazonaws.com/lab-shop-ui:latest)"
 
 Conditions:
   UseBilingual: !Equals [!Ref AppImage, bilingual]
@@ -174,7 +176,7 @@ Resources:
       VpcId:
         Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
       TargetType: ip
-      HealthCheckPath: /actuator/health
+      HealthCheckPath: !If [UseBilingual, /health, /actuator/health]
       HealthCheckIntervalSeconds: 30
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 3
@@ -261,11 +263,16 @@ Resources:
           Essential: true
           Image: !If [UseBilingual, !Ref BillingualEcrUri, "public.ecr.aws/aws-containers/retail-store-sample-ui:1.2.1"]
           PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
-          Environment:
-            - {Name: RETAIL_UI_ENDPOINTS_CATALOG, Value: "http://catalog.lab-shop-fg.local:8080"}
-            - {Name: RETAIL_UI_ENDPOINTS_CARTS, Value: "http://carts.lab-shop-fg.local:8080"}
-            - {Name: RETAIL_UI_ENDPOINTS_ORDERS, Value: "http://orders.lab-shop-fg.local:8080"}
-            - {Name: RETAIL_UI_ENDPOINTS_CHECKOUT, Value: "http://checkout.lab-shop-fg.local:8080"}
+          Environment: !If
+            - UseBilingual
+            - - {Name: ENDPOINTS_CATALOG, Value: "http://catalog.lab-shop-fg.local:8080"}
+              - {Name: ENDPOINTS_CARTS, Value: "http://carts.lab-shop-fg.local:8080"}
+              - {Name: ENDPOINTS_ORDERS, Value: "http://orders.lab-shop-fg.local:8080"}
+              - {Name: ENDPOINTS_CHECKOUT, Value: "http://checkout.lab-shop-fg.local:8080"}
+            - - {Name: RETAIL_UI_ENDPOINTS_CATALOG, Value: "http://catalog.lab-shop-fg.local:8080"}
+              - {Name: RETAIL_UI_ENDPOINTS_CARTS, Value: "http://carts.lab-shop-fg.local:8080"}
+              - {Name: RETAIL_UI_ENDPOINTS_ORDERS, Value: "http://orders.lab-shop-fg.local:8080"}
+              - {Name: RETAIL_UI_ENDPOINTS_CHECKOUT, Value: "http://checkout.lab-shop-fg.local:8080"}
           LogConfiguration:
             LogDriver: awslogs
             Options:
