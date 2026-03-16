@@ -19,20 +19,32 @@ CF_PL=$(aws ec2 describe-managed-prefix-lists \
   --query "PrefixLists[?PrefixListName=='com.amazonaws.global.cloudfront.origin-facing'].PrefixListId" \
   --output text --region "${AWS_REGION}")
 
+# Service-Linked Roles (새 계정용)
+aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com 2>/dev/null || true
+aws iam create-service-linked-role --aws-service-name es.amazonaws.com 2>/dev/null || true
+
 read -s -p "DB 패스워드 (8자 이상): " DB_PASS
 echo ""
+
+# ECS Fargate bilingual UI 이미지 (ECR)
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BILINGUAL_ECR="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/lab-shop-ui:latest"
+read -p "Bilingual ECR URI [${BILINGUAL_ECR}]: " INPUT_ECR
+BILINGUAL_ECR=${INPUT_ECR:-${BILINGUAL_ECR}}
 
 cd "${SCRIPT_DIR}"
 terraform init
 terraform plan \
   -var="cloudfront_prefix_list_id=${CF_PL}" \
-  -var="db_password=${DB_PASS}"
+  -var="db_password=${DB_PASS}" \
+  -var="bilingual_ecr_uri=${BILINGUAL_ECR}"
 
 read -p "적용하시겠습니까? (yes/no): " CONFIRM
 if [ "$CONFIRM" = "yes" ]; then
   terraform apply -auto-approve \
     -var="cloudfront_prefix_list_id=${CF_PL}" \
-    -var="db_password=${DB_PASS}"
+    -var="db_password=${DB_PASS}" \
+    -var="bilingual_ecr_uri=${BILINGUAL_ECR}"
   echo "✅ Terraform 배포 완료!"
   terraform output
 fi

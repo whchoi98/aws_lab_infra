@@ -23,6 +23,10 @@ CF_PL=$(aws ec2 describe-managed-prefix-lists \
   --query "PrefixLists[?PrefixListName=='com.amazonaws.global.cloudfront.origin-facing'].PrefixListId" \
   --output text --region "${AWS_REGION}")
 
+# Service-Linked Roles (새 계정용)
+aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com 2>/dev/null || true
+aws iam create-service-linked-role --aws-service-name es.amazonaws.com 2>/dev/null || true
+
 # CDK Bootstrap
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 npx cdk bootstrap aws://${ACCOUNT_ID}/${AWS_REGION}
