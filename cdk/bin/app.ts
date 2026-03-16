@@ -7,6 +7,8 @@ import { Vpc02Stack } from '../lib/vpc02-stack';
 import { TgwStack } from '../lib/tgw-stack';
 import { EksStack } from '../lib/eks-stack';
 import { DataServicesStack } from '../lib/data-services-stack';
+import { EcsFargateStack } from '../lib/ecs-fargate-stack';
+import { EcsEc2Stack } from '../lib/ecs-ec2-stack';
 import { LAB_CONFIG } from '../lib/config';
 
 const app = new cdk.App();
@@ -67,5 +69,25 @@ const dataServicesStack = new DataServicesStack(app, 'DataServicesStack', {
 });
 dataServicesStack.addDependency(dmzVpcStack);
 dataServicesStack.addDependency(tgwStack);
+
+// ============================================================================
+// ECS Fargate Stack (depends on DMZ VPC for subnets)
+// ============================================================================
+const ecsFargateStack = new EcsFargateStack(app, 'EcsFargateStack', {
+  env,
+  description: 'ECS Fargate ARM64 with bilingual shop microservices',
+  dmzVpcStack,
+});
+ecsFargateStack.addDependency(dmzVpcStack);
+
+// ============================================================================
+// ECS EC2 Stack (depends on DMZ VPC for subnets)
+// ============================================================================
+const ecsEc2Stack = new EcsEc2Stack(app, 'EcsEc2Stack', {
+  env,
+  description: 'ECS EC2 Graviton (t4g.large) with base shop microservices',
+  dmzVpcStack,
+});
+ecsEc2Stack.addDependency(dmzVpcStack);
 
 app.synth();

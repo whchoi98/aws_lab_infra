@@ -15,6 +15,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "bilingual_ecr_uri" {
+  description = "ECR image URI for the bilingual UI application (used by ECS Fargate module)"
+  type        = string
+  default     = ""
+}
+
 # -------------------------------------------------------
 # CIDR Configurations
 # -------------------------------------------------------

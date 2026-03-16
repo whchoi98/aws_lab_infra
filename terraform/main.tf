@@ -102,3 +102,28 @@ module "data_services" {
   db_password     = var.db_password
   common_tags     = local.common_tags
 }
+
+# -------------------------------------------------------
+# ECS Fargate - ARM64 with Bilingual App
+# -------------------------------------------------------
+module "ecs_fargate" {
+  source = "./modules/ecs-fargate"
+
+  vpc_id             = module.dmz_vpc.vpc_id
+  public_subnet_ids  = module.dmz_vpc.public_subnet_ids
+  private_subnet_ids = module.dmz_vpc.private_subnet_ids
+  bilingual_ecr_uri  = var.bilingual_ecr_uri
+  common_tags        = local.common_tags
+}
+
+# -------------------------------------------------------
+# ECS EC2 - Graviton (t4g.large) with Base App
+# -------------------------------------------------------
+module "ecs_ec2" {
+  source = "./modules/ecs-ec2"
+
+  vpc_id             = module.dmz_vpc.vpc_id
+  public_subnet_ids  = module.dmz_vpc.public_subnet_ids
+  private_subnet_ids = module.dmz_vpc.private_subnet_ids
+  common_tags        = local.common_tags
+}
