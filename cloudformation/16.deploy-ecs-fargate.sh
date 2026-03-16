@@ -41,6 +41,9 @@ echo "  ✅ 이미지: ${ECR_URI}:latest"
 # Step 2: CloudFormation 배포
 # ─────────────────────────────────────────────
 echo ""
+# ECS Service-Linked Role 자동 생성 (새 계정용)
+aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com 2>/dev/null || true
+
 echo "▶ [2/4] ECS Fargate 스택 배포..."
 aws cloudformation deploy \
   --stack-name "${STACK_NAME}" \

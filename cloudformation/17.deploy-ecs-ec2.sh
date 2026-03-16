@@ -23,6 +23,9 @@ echo ""
 # ─────────────────────────────────────────────
 # Step 1: CloudFormation 배포
 # ─────────────────────────────────────────────
+# ECS Service-Linked Role 자동 생성 (새 계정용)
+aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com 2>/dev/null || true
+
 echo "▶ [1/3] ECS EC2 스택 배포..."
 aws cloudformation deploy \
   --stack-name "${STACK_NAME}" \
