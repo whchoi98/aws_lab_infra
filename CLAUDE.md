@@ -36,12 +36,12 @@ aws_lab_infra/
 ├── cdk/                       # AWS CDK TypeScript
 │   ├── deploy.sh              # 전체 배포 래퍼
 │   ├── bin/app.ts             # 엔트리포인트
-│   └── lib/*.ts               # 6개 Stack
+│   └── lib/*.ts               # 8개 Stack
 │
 ├── terraform/                 # Terraform HCL
 │   ├── deploy.sh              # 전체 배포 래퍼
 │   ├── main.tf                # 루트 모듈
-│   └── modules/               # 4개 서브모듈
+│   └── modules/               # 6개 서브모듈
 │
 ├── legacy/                    # 이전 스크립트 (아카이브)
 └── docs/                      # 문서
@@ -49,7 +49,7 @@ aws_lab_infra/
 
 ## Key Commands
 
-### CloudFormation 배포 (번호순, 18개 스크립트)
+### CloudFormation 배포 (번호순, 21개 스크립트)
 ```bash
 cd cloudformation/
 ./00.check-prerequisites.sh      # 도구 자동 점검/설치
