@@ -3,12 +3,12 @@
 Shell + CloudFormation 방식의 인프라 배포.
 
 ## Structure
-- `00-15.*.sh` — 번호순 배포 스크립트 (18개)
+- `00-17.*.sh` — 번호순 배포 스크립트 (20개)
 - `99.eks-cleanup.sh` — 정리
-- `templates/` — CloudFormation YAML 템플릿 (9개)
+- `templates/` — CloudFormation YAML 템플릿 (11개)
 
 ## Execution Order
-00(check) → 00(vscode) → 01 → 02 → 03(source) → 04 → 05 → 06 → 07 → 08 → 09 → 10 → 11 → 12 → 13 → 14 → 15
+00(check) → 00(vscode) → 01 → 02 → 03(source) → 04 → 05 → 06 → 07~15(병렬 가능) → 16,17(ECS, 병렬 가능)
 
 ## Scripts
 | Script | Description |
@@ -23,16 +23,19 @@ Shell + CloudFormation 방식의 인프라 배포.
 | 06.deploy-karpenter.sh | Karpenter v1.9.0 |
 | 07.deploy-valkey.sh | Valkey (cache.r7g.large x2) |
 | 08.deploy-aurora.sh | Aurora MySQL (db.r7g.large x2) |
-| 09.deploy-app.sh | 앱 배포 |
+| 09.deploy-app.sh | EKS 앱 배포 (base/bilingual) |
+| 09-1.deploy-base-app.sh | EKS base 병렬 배포 (별도 ALB+CF) |
 | 10.deploy-opensearch.sh | OpenSearch (r7g.large.search x2) |
 | 11.create-s3-buckets.sh | S3 20 buckets |
 | 12.create-dynamodb-tables.sh | DynamoDB 20 tables |
 | 13.create-lambda-functions.sh | Lambda 20 functions |
 | 14.deploy-msk.sh | MSK (kafka.m7g.large x2) |
 | 15.enable-detailed-monitoring.sh | EC2 Detailed Monitoring |
+| 16.deploy-ecs-fargate.sh | ECS Fargate bilingual (ARM64, Docker+ECR) |
+| 17.deploy-ecs-ec2.sh | ECS EC2 base (t4g.large ASG) |
 | 99.eks-cleanup.sh | 정리 |
 
-## Templates (9개)
+## Templates (11개)
 | Template | Stack |
 |----------|-------|
 | vscode_server_secure.yaml | VSCode Server |
@@ -44,9 +47,11 @@ Shell + CloudFormation 방식의 인프라 배포.
 | valkey-cluster-stack.yaml | Valkey |
 | opensearch-stack.yaml | OpenSearch |
 | msk-stack.yaml | MSK |
+| ecs-shop-stack.yaml | ECS Fargate (bilingual, Cloud Map lab-shop-fg.local) |
+| ecs-ec2-shop-stack.yaml | ECS EC2 (base, ASG t4g.large, Cloud Map lab-shop.local) |
 
 ## Key Patterns
 - 템플릿 경로: `${SCRIPT_DIR}/templates/`
 - CF PrefixList: `aws ec2 describe-managed-prefix-lists`
-- 스택 이름: DMZVPC, VPC01, VPC02, TGW, Valkey, Aurora, OpenSearch, MSK
+- 스택 이름: DMZVPC, VPC01, VPC02, TGW, Valkey, Aurora, OpenSearch, MSK, ECS-Fargate-Shop, ECS-EC2-Shop
 - Export 패턴: `${AWS::StackName}-<suffix>`
