@@ -1,7 +1,8 @@
 # AWS Lab Infrastructure
 
-AWS 네트워크 + EKS 기반 마이크로서비스 랩 플랫폼.
+AWS 네트워크 + EKS/ECS 기반 마이크로서비스 랩 플랫폼.
 **3가지 IaC 도구**로 동일한 아키텍처를 구축합니다.
+ECS는 Fargate(bilingual) + EC2(base) 2가지 launch type을 지원합니다.
 
 ## 아키텍처
 
@@ -19,7 +20,7 @@ AWS 네트워크 + EKS 기반 마이크로서비스 랩 플랫폼.
           │  └────────────┘ │
           │  ┌────────────┐ │
           │  │ ALB → EKS  │ │ 8 Nodes (t4g.2xlarge)
-          │  │ 15 Pods    │ │ bilingual-app (한/영)
+          │  │ ALB → ECS  │ │ Fargate + EC2 (t4g.large)
           │  └────────────┘ │
           │  ┌────────────┐ │
           │  │ Aurora     │ │ db.r7g.large × 2
@@ -47,6 +48,8 @@ AWS 네트워크 + EKS 기반 마이크로서비스 랩 플랫폼.
 | **언어** | YAML + Bash | TypeScript | HCL |
 | **VPC 배포** | 스택별 순차 (5 stacks) | `cdk deploy --all` | `terraform apply` (한 번) |
 | **EKS** | eksctl | eksctl (하이브리드) | eksctl (하이브리드) |
+| **ECS Fargate** | ecs-shop-stack.yaml | EcsFargateStack | modules/ecs-fargate |
+| **ECS EC2** | ecs-ec2-shop-stack.yaml | EcsEc2Stack | modules/ecs-ec2 |
 | **Data Services** | Phase 4 별도 | Phase 3 별도 | Phase 1에 포함 |
 | **VPC 재사용** | 별도 템플릿 | 별도 Stack | 동일 모듈 (DRY) |
 | **가이드** | [README](cloudformation/README.md) | [README](cdk/README.md) | [README](terraform/README.md) |
@@ -64,8 +67,9 @@ source ./03.eks-setup-env.sh         # EKS 환경
 ./04.eks-create-cluster.sh           # EKS
 ./05.deploy-lbc.sh && ./06.deploy-karpenter.sh
 ./07.deploy-valkey.sh && ./08.deploy-aurora.sh
-./09.deploy-app.sh bilingual         # 쇼핑몰
-cd ../shared/ && ./03.deploy-cloudfront-protection.sh eksworkshop-cf lab-cf
+./09.deploy-app.sh bilingual         # EKS 쇼핑몰
+./16.deploy-ecs-fargate.sh           # ECS Fargate bilingual
+./17.deploy-ecs-ec2.sh               # ECS EC2 base
 ```
 
 ### 방식 2: AWS CDK
@@ -91,16 +95,19 @@ cd ../shared/ && ./02.deploy-app.sh bilingual
 ./03.deploy-cloudfront-protection.sh eksworkshop-tf lab-terraform
 ```
 
-## 계정당 리소스 (21 EC2 + 15 Pods)
+## 계정당 리소스
 
 | 리소스 | 타입 | 수량 |
 |--------|:---:|:---:|
 | VSCode Server | m7g.xlarge | 1 |
 | VPC EC2 (DMZ/VPC01/VPC02) | t4g.large | 12 (4×3) |
 | EKS Nodes | t4g.2xlarge | 8 |
+| ECS EC2 Nodes | t4g.large | 3 (ASG) |
+| ECS Fargate Tasks | ARM64 | 10 (5 서비스 × 2) |
+| ECS EC2 Tasks | ARM64 | 10 (5 서비스 × 2) |
 | Aurora MySQL | db.r7g.large | 2 |
 | Valkey (ElastiCache) | cache.r7g.large | 2 |
-| App Pods | - | 15 |
+| EKS App Pods | - | 15 |
 
 ## 모니터링 (CloudWatch)
 
@@ -119,5 +126,6 @@ cd shared/
 - **ALB**: CloudFront Prefix List SG (직접 접근 차단)
 - **EC2**: Private Subnet + SSM only
 - **EKS**: Pod Identity + KMS Secrets + GuardDuty
+- **ECS**: Task Execution Role + Task Role, SG inter-service isolation
 - **Network Firewall**: DMZ VPC 인바운드 검사
 - **Aurora**: Performance Insights + Enhanced Monitoring

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Hub-Spoke 네트워크 위에 EKS 마이크로서비스 쇼핑몰을 운영하는 AWS 랩 플랫폼.
+Hub-Spoke 네트워크 위에 EKS + ECS 마이크로서비스 쇼핑몰을 운영하는 AWS 랩 플랫폼.
 
 ## Network Topology
 
@@ -16,7 +16,7 @@ Hub-Spoke 네트워크 위에 EKS 마이크로서비스 쇼핑몰을 운영하�
               ┌────────┴────────┐
               │  DMZ VPC (10.11)│
               │  NFW → NAT GW   │
-              │  ALB → EKS/EC2  │
+              │  ALB → EKS/ECS  │
               │  Data: Aurora,  │
               │    Valkey       │
               └────────┬────────┘
@@ -46,6 +46,8 @@ Hub-Spoke 네트워크 위에 EKS 마이크로서비스 쇼핑몰을 운영하�
 | Valkey | valkey-cluster-stack.yaml | ElastiCache Valkey (cache.r7g.large x2, Data Subnet) |
 | OpenSearch | opensearch-stack.yaml | OpenSearch (r7g.large.search x2, Data Subnet) |
 | MSK | msk-stack.yaml | MSK Kafka (kafka.m7g.large x2) |
+| ECS Fargate | ecs-shop-stack.yaml | ECS Fargate ARM64 bilingual (Cloud Map lab-shop-fg.local) |
+| ECS EC2 | ecs-ec2-shop-stack.yaml | ECS EC2 t4g.large base (Cloud Map lab-shop.local) |
 
 ### EKS (eksctl + Helm)
 | Component | Version | Method |
@@ -54,29 +56,45 @@ Hub-Spoke 네트워크 위에 EKS 마이크로서비스 쇼핑몰을 운영하�
 | LBC | v3.1.0 | Helm + Pod Identity |
 | Karpenter | v1.9.0 | Helm + Pod Identity |
 
-### Application (shared/)
-| App | Description |
-|-----|-------------|
-| base-application | AWS Retail Store Sample (영어, pre-built images) |
-| bilingual-app | Custom Node.js Express SSR (한/영, Docker build) |
+### ECS (CloudFormation / CDK / Terraform)
+| Component | Launch Type | App | Cloud Map |
+|-----------|-------------|-----|-----------|
+| ECS Fargate | Fargate ARM64 | bilingual (한/영, ECR) | lab-shop-fg.local |
+| ECS EC2 | EC2 t4g.large (ASG 3대) | base (영어, public ECR) | lab-shop.local |
 
-### Microservices (bilingual-app)
+- 5 서비스 × 2 클러스터, DB sidecar 동일 Task Definition 내 배치
+- Service Discovery: Cloud Map (Fargate: A record, EC2: SRV record)
+
+### Application (shared/)
+| App | Description | 사용처 |
+|-----|-------------|--------|
+| base-application | AWS Retail Store Sample (영어, pre-built images) | EKS base, ECS EC2 |
+| bilingual-app | Custom Node.js Express SSR (한/영, Docker build) | EKS bilingual, ECS Fargate |
+| base-application-standalone | base UI 별도 배포 (ui-base namespace) | EKS 병렬 배포 |
+
+### Microservices (공통)
 | Service | Image | DB Sidecar | Port |
 |---------|-------|-----------|------|
-| ui | Custom (ECR) | - | 8080 |
-| catalog | retail-store-sample-catalog:0.8.0 | MySQL 8.0 (PVC) | 8080 |
-| carts | retail-store-sample-cart:0.8.0 | DynamoDB Local | 8080 |
-| checkout | retail-store-sample-checkout:0.8.0 | Redis 7 | 8080 |
-| orders | retail-store-sample-orders:0.8.0 | PostgreSQL 16 | 8080 |
+| ui (bilingual) | Custom ECR (lab-shop-ui) | - | 8080 |
+| ui (base) | retail-store-sample-ui:1.2.1 | - | 8080 |
+| catalog | retail-store-sample-catalog:1.2.1 | MySQL 8.0 | 8080 |
+| carts | retail-store-sample-cart:1.2.1 | DynamoDB Local 2.0.0 | 8080 |
+| checkout | retail-store-sample-checkout:1.2.1 | Redis 7 | 8080 |
+| orders | retail-store-sample-orders:1.2.1 | PostgreSQL 16 | 8080 |
 
 ## Data Flow
 
 ```
-User → CloudFront → ALB (Public Subnet) → UI Pod (Private Subnet)
-  UI → Catalog API → MySQL
-  UI → Carts API → DynamoDB Local
-  UI → Checkout API → Redis
-  UI → Orders API → PostgreSQL
+User → CloudFront → ALB (Public Subnet) → UI (Private Subnet)
+  UI → Catalog API → MySQL (sidecar)
+  UI → Carts API → DynamoDB Local (sidecar)
+  UI → Checkout API → Redis (sidecar)
+  UI → Orders API → PostgreSQL (sidecar)
+
+Platform variants:
+  EKS: Pod (Kustomize) + K8s Service Discovery
+  ECS Fargate: Task (awsvpc) + Cloud Map A record
+  ECS EC2: Task (bridge) + Cloud Map SRV record
 ```
 
 ### Serverless Resources
@@ -91,6 +109,7 @@ User → CloudFront → ALB (Public Subnet) → UI Pod (Private Subnet)
 - Network Firewall: IGW ingress inspection
 - EC2: Private subnet only, SSM access
 - EKS: Pod Identity (IRSA replacement), KMS secrets encryption
+- ECS: Task Execution Role + Task Role, SG inter-service isolation
 - Karpenter: Scoped IAM policies, arm64-only NodePool
 - S3: Public access blocked on all buckets
 - DynamoDB: Deletion protection enabled
@@ -100,6 +119,7 @@ User → CloudFront → ALB (Public Subnet) → UI Pod (Private Subnet)
 ## Monitoring
 - EC2: Detailed Monitoring (1-min interval on all instances)
 - EKS: Container Insights + 15 addons
+- ECS: Container Insights enabled, CloudWatch Logs (7d retention)
 - Aurora: Performance Insights (7d) + Enhanced Monitoring (60s)
 - Lambda: X-Ray + Insights Layer
 - MSK: CloudWatch Broker Logs
