@@ -1,0 +1,521 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  ECS Fargate (Graviton ARM64) Retail Store Sample App on DMZ VPC.
+  UI exposed via ALB + CloudFront, backend via Cloud Map service discovery.
+
+Parameters:
+  DMZVPCStackName:
+    Type: String
+    Default: DMZVPC
+
+  AppImage:
+    Type: String
+    Default: base
+    AllowedValues: [base, bilingual]
+
+  BillingualEcrUri:
+    Type: String
+    Default: ""
+
+Conditions:
+  UseBilingual: !Equals [!Ref AppImage, bilingual]
+
+Resources:
+  #========================================
+  # ECS Cluster
+  #========================================
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: lab-shop-ecs-fargate
+      CapacityProviders: [FARGATE]
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: lab-shop-ecs-fargate
+        - Key: Environment
+          Value: lab
+        - Key: Project
+          Value: aws-lab-infra
+        - Key: ManagedBy
+          Value: cloudformation
+
+  #========================================
+  # Cloud Map Namespace
+  #========================================
+  ServiceDiscoveryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: lab-shop-fg.local
+      Vpc:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+
+  #========================================
+  # IAM Roles
+  #========================================
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lab-ecs-fg-task-execution
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lab-ecs-fg-task-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: xray-write
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [xray:PutTraceSegments, xray:PutTelemetryRecords]
+                Resource: "*"
+
+  #========================================
+  # Security Groups
+  #========================================
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Fargate Shop ALB SG
+      GroupName: lab-ecs-fg-alb-sg
+      VpcId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+          Description: HTTP (restricted to CloudFront by deploy script)
+      Tags:
+        - Key: Name
+          Value: lab-ecs-fg-alb-sg
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Fargate Tasks SG
+      GroupName: lab-ecs-fg-tasks-sg
+      VpcId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: From ALB
+      Tags:
+        - Key: Name
+          Value: lab-ecs-fg-tasks-sg
+
+  ECSSecurityGroupSelfIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ECSSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref ECSSecurityGroup
+
+  #========================================
+  # ALB
+  #========================================
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: lab-ecs-fg-shop-alb
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - Fn::ImportValue: !Sub "${DMZVPCStackName}-Public-Subnet-A"
+        - Fn::ImportValue: !Sub "${DMZVPCStackName}-Public-Subnet-B"
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Tags:
+        - Key: Name
+          Value: lab-ecs-fg-shop-alb
+        - Key: Environment
+          Value: lab
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultAction:
+        - Type: forward
+          TargetGroupArn: !Ref UITargetGroup
+
+  UITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: lab-ecs-fg-ui-tg
+      Port: 8080
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub "${DMZVPCStackName}-VPC-ID"
+      TargetType: ip
+      HealthCheckPath: /actuator/health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  #========================================
+  # Log Groups
+  #========================================
+  UILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs-fg/lab-shop/ui
+      RetentionInDays: 7
+  CatalogLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs-fg/lab-shop/catalog
+      RetentionInDays: 7
+  CartsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs-fg/lab-shop/carts
+      RetentionInDays: 7
+  CheckoutLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs-fg/lab-shop/checkout
+      RetentionInDays: 7
+  OrdersLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs-fg/lab-shop/orders
+      RetentionInDays: 7
+
+  #========================================
+  # Cloud Map Services
+  #========================================
+  CatalogDiscovery:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: catalog
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        DnsRecords: [{Type: A, TTL: 10}]
+  CartsDiscovery:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: carts
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        DnsRecords: [{Type: A, TTL: 10}]
+  CheckoutDiscovery:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: checkout
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        DnsRecords: [{Type: A, TTL: 10}]
+  OrdersDiscovery:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: orders
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        DnsRecords: [{Type: A, TTL: 10}]
+
+  #========================================
+  # Task Definitions (awsvpc for Fargate)
+  #========================================
+  UITaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: lab-shop-fg-ui
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: ui
+          Essential: true
+          Image: !If [UseBilingual, !Ref BillingualEcrUri, "public.ecr.aws/aws-containers/retail-store-sample-ui:1.2.1"]
+          PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
+          Environment:
+            - {Name: RETAIL_UI_ENDPOINTS_CATALOG, Value: "http://catalog.lab-shop-fg.local:8080"}
+            - {Name: RETAIL_UI_ENDPOINTS_CARTS, Value: "http://carts.lab-shop-fg.local:8080"}
+            - {Name: RETAIL_UI_ENDPOINTS_ORDERS, Value: "http://orders.lab-shop-fg.local:8080"}
+            - {Name: RETAIL_UI_ENDPOINTS_CHECKOUT, Value: "http://checkout.lab-shop-fg.local:8080"}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref UILogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ui
+
+  CatalogTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: lab-shop-fg-catalog
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: catalog
+          Essential: true
+          Image: "public.ecr.aws/aws-containers/retail-store-sample-catalog:1.2.1"
+          PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
+          Environment:
+            - {Name: RETAIL_CATALOG_PERSISTENCE_PROVIDER, Value: mysql}
+            - {Name: RETAIL_CATALOG_PERSISTENCE_ENDPOINT, Value: "localhost:3306"}
+            - {Name: RETAIL_CATALOG_PERSISTENCE_DB_NAME, Value: catalog}
+            - {Name: RETAIL_CATALOG_PERSISTENCE_USER, Value: catalog}
+            - {Name: RETAIL_CATALOG_PERSISTENCE_PASSWORD, Value: dYmNfWV4uEvTzoFu}
+          DependsOn: [{ContainerName: mysql, Condition: START}]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref CatalogLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: catalog}
+        - Name: mysql
+          Essential: true
+          Image: "public.ecr.aws/docker/library/mysql:8.0"
+          Environment:
+            - {Name: MYSQL_ROOT_PASSWORD, Value: dYmNfWV4uEvTzoFu}
+            - {Name: MYSQL_DATABASE, Value: catalog}
+            - {Name: MYSQL_USER, Value: catalog}
+            - {Name: MYSQL_PASSWORD, Value: dYmNfWV4uEvTzoFu}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref CatalogLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: mysql}
+
+  CartsTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: lab-shop-fg-carts
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: carts
+          Essential: true
+          Image: "public.ecr.aws/aws-containers/retail-store-sample-cart:1.2.1"
+          PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
+          Environment:
+            - {Name: RETAIL_CART_PERSISTENCE_PROVIDER, Value: dynamodb}
+            - {Name: RETAIL_CART_PERSISTENCE_DYNAMODB_TABLE_NAME, Value: Items}
+            - {Name: RETAIL_CART_PERSISTENCE_DYNAMODB_CREATE_TABLE, Value: "true"}
+            - {Name: AWS_ACCESS_KEY_ID, Value: key}
+            - {Name: AWS_SECRET_ACCESS_KEY, Value: secret}
+            - {Name: RETAIL_CART_PERSISTENCE_DYNAMODB_ENDPOINT, Value: "http://localhost:8000"}
+          DependsOn: [{ContainerName: dynamodb-local, Condition: START}]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref CartsLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: carts}
+        - Name: dynamodb-local
+          Essential: true
+          Image: "amazon/dynamodb-local:2.0.0"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref CartsLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: dynamodb}
+
+  CheckoutTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: lab-shop-fg-checkout
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: checkout
+          Essential: true
+          Image: "public.ecr.aws/aws-containers/retail-store-sample-checkout:1.2.1"
+          PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
+          Environment:
+            - {Name: RETAIL_CHECKOUT_PERSISTENCE_PROVIDER, Value: redis}
+            - {Name: RETAIL_CHECKOUT_PERSISTENCE_REDIS_URL, Value: "redis://localhost:6379"}
+            - {Name: RETAIL_CHECKOUT_ENDPOINTS_ORDERS, Value: "http://orders.lab-shop-fg.local:8080"}
+          DependsOn: [{ContainerName: redis, Condition: START}]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref CheckoutLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: checkout}
+        - Name: redis
+          Essential: true
+          Image: "public.ecr.aws/docker/library/redis:7-alpine"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref CheckoutLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: redis}
+
+  OrdersTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: lab-shop-fg-orders
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform: {CpuArchitecture: ARM64, OperatingSystemFamily: LINUX}
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: orders
+          Essential: true
+          Image: "public.ecr.aws/aws-containers/retail-store-sample-orders:1.2.1"
+          PortMappings: [{ContainerPort: 8080, Protocol: tcp}]
+          Environment:
+            - {Name: RETAIL_ORDERS_PERSISTENCE_PROVIDER, Value: postgres}
+            - {Name: RETAIL_ORDERS_PERSISTENCE_ENDPOINT, Value: "localhost:5432"}
+            - {Name: RETAIL_ORDERS_PERSISTENCE_NAME, Value: orders}
+            - {Name: RETAIL_ORDERS_PERSISTENCE_USERNAME, Value: orders}
+            - {Name: RETAIL_ORDERS_PERSISTENCE_PASSWORD, Value: 3z6sGLhGunfn0xZc}
+          DependsOn: [{ContainerName: postgresql, Condition: START}]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref OrdersLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: orders}
+        - Name: postgresql
+          Essential: true
+          Image: "public.ecr.aws/docker/library/postgres:16-alpine"
+          Environment:
+            - {Name: POSTGRES_DB, Value: orders}
+            - {Name: POSTGRES_USER, Value: orders}
+            - {Name: POSTGRES_PASSWORD, Value: 3z6sGLhGunfn0xZc}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: {awslogs-group: !Ref OrdersLogGroup, awslogs-region: !Ref "AWS::Region", awslogs-stream-prefix: postgresql}
+
+  #========================================
+  # ECS Services (Fargate)
+  #========================================
+  UIService:
+    Type: AWS::ECS::Service
+    DependsOn: ALBListener
+    Properties:
+      ServiceName: ui
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref UITaskDef
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-A"
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-B"
+          SecurityGroups: [!Ref ECSSecurityGroup]
+      LoadBalancers:
+        - ContainerName: ui
+          ContainerPort: 8080
+          TargetGroupArn: !Ref UITargetGroup
+
+  CatalogService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: catalog
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref CatalogTaskDef
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-A"
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-B"
+          SecurityGroups: [!Ref ECSSecurityGroup]
+      ServiceRegistries:
+        - RegistryArn: !GetAtt CatalogDiscovery.Arn
+
+  CartsService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: carts
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref CartsTaskDef
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-A"
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-B"
+          SecurityGroups: [!Ref ECSSecurityGroup]
+      ServiceRegistries:
+        - RegistryArn: !GetAtt CartsDiscovery.Arn
+
+  CheckoutService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: checkout
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref CheckoutTaskDef
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-A"
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-B"
+          SecurityGroups: [!Ref ECSSecurityGroup]
+      ServiceRegistries:
+        - RegistryArn: !GetAtt CheckoutDiscovery.Arn
+
+  OrdersService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: orders
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref OrdersTaskDef
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-A"
+            - Fn::ImportValue: !Sub "${DMZVPCStackName}-Private-Subnet-B"
+          SecurityGroups: [!Ref ECSSecurityGroup]
+      ServiceRegistries:
+        - RegistryArn: !GetAtt OrdersDiscovery.Arn
+
+Outputs:
+  ClusterName:
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub "${AWS::StackName}-Cluster"
+  ALBDnsName:
+    Value: !GetAtt ALB.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+  ALBSecurityGroupId:
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-SG"
+  ALBURL:
+    Value: !Sub "http://${ALB.DNSName}"
